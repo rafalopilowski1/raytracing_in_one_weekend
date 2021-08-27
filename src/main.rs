@@ -20,7 +20,7 @@ use std::{
 };
 use vec3::Vec3;
 
-use crate::material::{Lamberian, Metal};
+use crate::material::{Dielectric, Lamberian, Metal};
 
 fn random_float<R: Rng + ?Sized>(rng: &mut R, min: Option<f64>, max: Option<f64>) -> f64 {
     match (min.is_some(), max.is_some()) {
@@ -67,9 +67,9 @@ fn ray_color(ray: &mut Ray, world: &mut HittableList, depth: u8) -> Vec3 {
 fn main() -> Result<(), Box<dyn Error>> {
     // Materials
     let material_ground = Arc::new(Lamberian::new(Vec3::new(0.8, 0.8, 0.)));
-    let material_center = Arc::new(Lamberian::new(Vec3::new(0.7, 0.3, 0.3)));
-    let material_left = Arc::new(Metal::new(Vec3::new(0.8, 0.8, 0.8), 0.3));
-    let material_right = Arc::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 1.0));
+    let material_center = Arc::new(Lamberian::new(Vec3::new(0.1, 0.2, 0.5)));
+    let material_left = Arc::new(Dielectric::new(1.5));
+    let material_right = Arc::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.0));
     // World
 
     let mut world = HittableList::new(vec![
@@ -79,7 +79,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             material_ground,
         )),
         Box::new(Sphere::new(Vec3::new(0., 0., -1.), 0.5, material_center)),
-        Box::new(Sphere::new(Vec3::new(1.0, 0., -1.), 0.5, material_left)),
+        Box::new(Sphere::new(
+            Vec3::new(1.0, 0., -1.),
+            0.5,
+            material_left.clone(),
+        )),
+        Box::new(Sphere::new(Vec3::new(1.0, 0., -1.), -0.4, material_left)),
         Box::new(Sphere::new(Vec3::new(-1.0, -0., -1.), 0.5, material_right)),
     ]);
 
@@ -89,7 +94,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Image
     const IMAGE_WIDTH: u16 = 400;
     let image_height: u16 = (IMAGE_WIDTH as f64 / camera.aspect_ratio) as u16;
-    const SAMPLES_PER_PIXEL: u8 = 100;
+    const SAMPLES_PER_PIXEL: u8 = 200;
     let mut MAX_DEPTH: u8 = 50;
     // Render
 
