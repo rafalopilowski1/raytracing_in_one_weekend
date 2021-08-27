@@ -1,13 +1,15 @@
+use std::rc::Rc;
+
 use crate::{
     material::{Lamberian, Material},
     ray::Ray,
     vec3::Vec3,
 };
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone)]
 pub struct HitRecord {
     pub p: Vec3,
     pub normal: Vec3,
-
+    pub material: Rc<dyn Material>,
     pub t: f64,
     pub front_face: bool,
 }
@@ -27,6 +29,7 @@ impl Default for HitRecord {
         Self {
             p: Vec3::default(),
             normal: Vec3::default(),
+            material: Rc::new(Lamberian::new(Vec3::default())),
             t: 0.0,
             front_face: false,
         }
@@ -52,7 +55,6 @@ impl Hittable for HittableList {
         let mut temp_rec = HitRecord::default();
         let mut hit_anything = false;
         let mut closest_so_far = t_max;
-
         for object in &self.objects {
             if object.hit(ray, t_min, closest_so_far, &mut temp_rec) {
                 hit_anything = true;

@@ -69,7 +69,7 @@ impl Vec3 {
         }
     }
     pub fn near_zero(vec: Vec3) -> bool {
-        let s = 1e-8;
+        let s = f64::MIN_POSITIVE;
         f64::abs(vec.x) < s && f64::abs(vec.y) < s && f64::abs(vec.z) < s
     }
     pub fn reflect(v: Vec3, n: Vec3) -> Vec3 {

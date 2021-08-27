@@ -14,11 +14,11 @@ use sphere::Sphere;
 use vec3::Vec3;
 
 use std::{
-    char::MAX,
     error::Error,
     f64::consts::PI,
     fs::File,
     io::{BufWriter, Write},
+    rc::Rc,
 };
 
 use crate::material::{Lamberian, Metal};
@@ -48,29 +48,40 @@ fn ray_color_iterative<R: Rng + ?Sized>(
     ray: &mut Ray,
     world: &mut HittableList,
     rec: &mut HitRecord,
-    acc: &mut Vec3,
-    rng: &mut R,
+    scattered: &mut Ray,
+    attenuation: &mut Vec3,
+    _rng: &mut R,
 ) -> Vec3 {
     loop {
         if !world.hit(*ray, f64::MIN_POSITIVE, f64::INFINITY, rec) {
             let unit_direction: Vec3 = Vec3::unit_vector(ray.direction);
             let t = 0.5 * (unit_direction.y + 1.0);
-            return *acc * Vec3::new(1., 1., 1.) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t;
+            return *attenuation * Vec3::new(1., 1., 1.) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t;
         }
-        let target: Vec3 = rec.p + Vec3::random_in_hemisphere(rng, rec.normal);
-        *ray = Ray::new(rec.p, target - rec.p);
-        *acc *= 0.5;
+
+        if !rec.material.scatter(ray, rec, attenuation, scattered) {
+            return *attenuation * Vec3::default();
+        }
     }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Materials
-
+    let material_ground = Rc::new(Lamberian::new(Vec3::new(0.8, 0.8, 0.)));
+    let material_center = Rc::new(Lamberian::new(Vec3::new(0.7, 0.3, 0.3)));
+    let material_left = Rc::new(Metal::new(Vec3::new(0.8, 0.8, 0.8)));
+    let material_right = Rc::new(Metal::new(Vec3::new(0.8, 0.6, 0.2)));
     // World
 
     let mut world = HittableList::new(vec![
-        Box::new(Sphere::new(Vec3::new(0., 0., -1.), 0.5)),
-        Box::new(Sphere::new(Vec3::new(0., -100.5, -1.), 100.)),
+        Box::new(Sphere::new(Vec3::new(0., 0., -1.), 0.5, material_ground)),
+        Box::new(Sphere::new(
+            Vec3::new(0., -100.5, -1.),
+            100.,
+            material_center,
+        )),
+        Box::new(Sphere::new(Vec3::new(-1.0, -0., -1.), 0.5, material_left)),
+        Box::new(Sphere::new(Vec3::new(1.0, 0., -1.), 0.5, material_right)),
     ]);
 
     // Camera
@@ -80,7 +91,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     const IMAGE_WIDTH: u16 = 1920;
     let image_height: u16 = (IMAGE_WIDTH as f64 / camera.aspect_ratio) as u16;
     const SAMPLES_PER_PIXEL: u8 = 100;
-    let mut MAX_DEPTH: u8 = 50;
+    //let mut MAX_DEPTH: u8 = 50;
     // Render
 
     let file_ppm = File::create("image.ppm")?;
@@ -97,9 +108,16 @@ fn main() -> Result<(), Box<dyn Error>> {
                     (h as f64 + random_float(&mut rng, None, None)) / (image_height as f64 - 1.);
                 let mut r = Camera::get_ray(&camera, u, v);
                 let mut rec = HitRecord::default();
-                let mut acc = Vec3::new(1., 1., 1.);
-                pixel_color +=
-                    ray_color_iterative(&mut r, &mut world, &mut rec, &mut acc, &mut rng);
+                let mut attenuation = Vec3::new(0., 0., 0.);
+                let mut scattered = Ray::default();
+                pixel_color += ray_color_iterative(
+                    &mut r,
+                    &mut world,
+                    &mut rec,
+                    &mut scattered,
+                    &mut attenuation,
+                    &mut rng,
+                );
             }
 
             write_color(&mut buf_writer, pixel_color, SAMPLES_PER_PIXEL)?;
