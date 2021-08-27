@@ -30,7 +30,7 @@ fn random_float<R: Rng + ?Sized>(rng: &mut R, min: Option<f64>, max: Option<f64>
 }
 
 fn degrees_to_radians(degrees: f64) -> f64 {
-    degrees * PI / 180.0
+    degrees * (PI) / 180.0
 }
 
 fn clamp(x: f64, min: f64, max: f64) -> f64 {
@@ -68,24 +68,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Materials
     let material_ground = Arc::new(Lamberian::new(Vec3::new(0.8, 0.8, 0.)));
     let material_center = Arc::new(Lamberian::new(Vec3::new(0.1, 0.2, 0.5)));
-    let material_left = Arc::new(Dielectric::new(1.5));
-    let material_right = Arc::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.0));
+
+    let material_left = Arc::new(Lamberian::new(Vec3::new(0., 0., 1.)));
+    let material_right = Arc::new(Lamberian::new(Vec3::new(1., 0., 0.)));
+
     // World
 
+    let R = f64::cos(PI / 4.);
+
     let mut world = HittableList::new(vec![
-        Box::new(Sphere::new(
-            Vec3::new(0., -100.5, -1.),
-            100.,
-            material_ground,
-        )),
-        Box::new(Sphere::new(Vec3::new(0., 0., -1.), 0.5, material_center)),
-        Box::new(Sphere::new(
-            Vec3::new(1.0, 0., -1.),
-            0.5,
-            material_left.clone(),
-        )),
-        Box::new(Sphere::new(Vec3::new(1.0, 0., -1.), -0.4, material_left)),
-        Box::new(Sphere::new(Vec3::new(-1.0, -0., -1.), 0.5, material_right)),
+        Box::new(Sphere::new(Vec3::new(-R, 0., -1.), -0.4, material_left)),
+        Box::new(Sphere::new(Vec3::new(R, -0., -1.), 0.5, material_right)),
     ]);
 
     // Camera
