@@ -44,27 +44,6 @@ fn clamp(x: f64, min: f64, max: f64) -> f64 {
     x
 }
 
-fn ray_color_world<R: Rng + ?Sized>(
-    ray: Ray,
-    world: &mut HittableList,
-    depth: u8,
-    rec: &mut HitRecord,
-    rng: &mut R,
-) -> Vec3 {
-    if depth == 0 {
-        return Vec3::new(0., 0., 0.);
-    }
-
-    if !world.hit(ray, f64::MIN_POSITIVE, f64::INFINITY, rec) {
-        let unit_direction: Vec3 = Vec3::unit_vector(ray.direction);
-        let t = 0.5 * (unit_direction.y + 1.0);
-        return Vec3::new(1., 1., 1.) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t;
-    }
-
-    let target: Vec3 = rec.p + Vec3::random_in_hemisphere(rng, rec.normal);
-    ray_color_world(Ray::new(rec.p, target - rec.p), world, depth - 1, rec, rng) * 0.5
-}
-
 fn ray_color_iterative<R: Rng + ?Sized>(
     ray: &mut Ray,
     world: &mut HittableList,
