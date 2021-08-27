@@ -11,15 +11,14 @@ use rand::Rng;
 use ray::Ray;
 use sphere::Sphere;
 
-use vec3::Vec3;
-
 use std::{
     error::Error,
     f64::consts::PI,
     fs::File,
     io::{BufWriter, Write},
-    rc::Rc,
+    sync::Arc,
 };
+use vec3::Vec3;
 
 use crate::material::{Lamberian, Metal};
 
@@ -44,54 +43,54 @@ fn clamp(x: f64, min: f64, max: f64) -> f64 {
     x
 }
 
-fn ray_color_iterative<R: Rng + ?Sized>(
-    ray: &mut Ray,
-    world: &mut HittableList,
-    rec: &mut HitRecord,
-    scattered: &mut Ray,
-    attenuation: &mut Vec3,
-    _rng: &mut R,
-) -> Vec3 {
-    loop {
-        if !world.hit(*ray, f64::MIN_POSITIVE, f64::INFINITY, rec) {
-            let unit_direction: Vec3 = Vec3::unit_vector(ray.direction);
-            let t = 0.5 * (unit_direction.y + 1.0);
-            return *attenuation * Vec3::new(1., 1., 1.) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t;
-        }
-
-        if !rec.material.scatter(ray, rec, attenuation, scattered) {
-            return *attenuation * Vec3::default();
-        }
+fn ray_color(ray: &mut Ray, world: &mut HittableList, depth: u8) -> Vec3 {
+    let mut rec = HitRecord::default();
+    if depth == 0 {
+        return Vec3::default();
     }
+    if world.hit(*ray, f64::MIN_POSITIVE, f64::INFINITY, &mut rec) {
+        let mut scattered = Ray::default();
+        let mut attenuation = Vec3::default();
+        if rec
+            .material
+            .scatter(ray, &rec, &mut attenuation, &mut scattered)
+        {
+            return attenuation * ray_color(&mut scattered, world, depth - 1);
+        }
+        return Vec3::default();
+    }
+    let unit_direction: Vec3 = Vec3::unit_vector(ray.direction);
+    let t = 0.5 * (unit_direction.y + 1.0);
+    Vec3::new(1., 1., 1.) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Materials
-    let material_ground = Rc::new(Lamberian::new(Vec3::new(0.8, 0.8, 0.)));
-    let material_center = Rc::new(Lamberian::new(Vec3::new(0.7, 0.3, 0.3)));
-    let material_left = Rc::new(Metal::new(Vec3::new(0.8, 0.8, 0.8)));
-    let material_right = Rc::new(Metal::new(Vec3::new(0.8, 0.6, 0.2)));
+    let material_ground = Arc::new(Lamberian::new(Vec3::new(0.8, 0.8, 0.)));
+    let material_center = Arc::new(Lamberian::new(Vec3::new(0.7, 0.3, 0.3)));
+    let material_left = Arc::new(Metal::new(Vec3::new(0.8, 0.8, 0.8)));
+    let material_right = Arc::new(Metal::new(Vec3::new(0.8, 0.6, 0.2)));
     // World
 
     let mut world = HittableList::new(vec![
-        Box::new(Sphere::new(Vec3::new(0., 0., -1.), 0.5, material_ground)),
         Box::new(Sphere::new(
             Vec3::new(0., -100.5, -1.),
             100.,
-            material_center,
+            material_ground,
         )),
-        Box::new(Sphere::new(Vec3::new(-1.0, -0., -1.), 0.5, material_left)),
-        Box::new(Sphere::new(Vec3::new(1.0, 0., -1.), 0.5, material_right)),
+        Box::new(Sphere::new(Vec3::new(0., 0., -1.), 0.5, material_center)),
+        Box::new(Sphere::new(Vec3::new(1.0, 0., -1.), 0.5, material_left)),
+        Box::new(Sphere::new(Vec3::new(-1.0, -0., -1.), 0.5, material_right)),
     ]);
 
     // Camera
     let camera: Camera = Camera::default();
 
     // Image
-    const IMAGE_WIDTH: u16 = 1920;
+    const IMAGE_WIDTH: u16 = 400;
     let image_height: u16 = (IMAGE_WIDTH as f64 / camera.aspect_ratio) as u16;
     const SAMPLES_PER_PIXEL: u8 = 100;
-    //let mut MAX_DEPTH: u8 = 50;
+    let mut MAX_DEPTH: u8 = 50;
     // Render
 
     let file_ppm = File::create("image.ppm")?;
@@ -107,17 +106,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 let v =
                     (h as f64 + random_float(&mut rng, None, None)) / (image_height as f64 - 1.);
                 let mut r = Camera::get_ray(&camera, u, v);
-                let mut rec = HitRecord::default();
-                let mut attenuation = Vec3::new(0., 0., 0.);
-                let mut scattered = Ray::default();
-                pixel_color += ray_color_iterative(
-                    &mut r,
-                    &mut world,
-                    &mut rec,
-                    &mut scattered,
-                    &mut attenuation,
-                    &mut rng,
-                );
+                //let mut rec = HitRecord::default();
+                //let mut attenuation = Vec3::new(0., 0., 0.);
+                //let mut scattered = Ray::default();
+                pixel_color += ray_color(&mut r, &mut world, MAX_DEPTH);
             }
 
             write_color(&mut buf_writer, pixel_color, SAMPLES_PER_PIXEL)?;
