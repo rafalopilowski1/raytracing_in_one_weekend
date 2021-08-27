@@ -20,10 +20,14 @@ impl Lamberian {
 
 pub struct Metal {
     albedo: Vec3,
+    fuzz: f64,
 }
 impl Metal {
-    pub fn new(albedo: Vec3) -> Self {
-        Self { albedo }
+    pub fn new(albedo: Vec3, fuzz: f64) -> Self {
+        Self {
+            albedo,
+            fuzz: if fuzz < 1. { fuzz } else { 1. },
+        }
     }
 }
 
@@ -54,8 +58,12 @@ impl Material for Metal {
         attenuation: &mut Vec3,
         scattered: &mut Ray,
     ) -> bool {
+        let mut rng = rand::thread_rng();
         let reflected = Vec3::reflect(Vec3::unit_vector(ray_in.direction), rec.normal);
-        *scattered = Ray::new(rec.p, reflected);
+        *scattered = Ray::new(
+            rec.p,
+            reflected + Vec3::random_in_unit_sphere(&mut rng) * self.fuzz,
+        );
         *attenuation = self.albedo;
         Vec3::dot(scattered.direction, rec.normal) > 0.
     }

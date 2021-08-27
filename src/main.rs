@@ -68,8 +68,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Materials
     let material_ground = Arc::new(Lamberian::new(Vec3::new(0.8, 0.8, 0.)));
     let material_center = Arc::new(Lamberian::new(Vec3::new(0.7, 0.3, 0.3)));
-    let material_left = Arc::new(Metal::new(Vec3::new(0.8, 0.8, 0.8)));
-    let material_right = Arc::new(Metal::new(Vec3::new(0.8, 0.6, 0.2)));
+    let material_left = Arc::new(Metal::new(Vec3::new(0.8, 0.8, 0.8), 0.3));
+    let material_right = Arc::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 1.0));
     // World
 
     let mut world = HittableList::new(vec![
