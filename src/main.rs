@@ -99,8 +99,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                 image_width,
                 h,
                 image_height,
-                camera,
-                async_world,
+                camera.clone(),
+                async_world.clone(),
             );
 
             write_color(&mut buf_writer, pixel_color, samples_per_pixel)?;
@@ -125,7 +125,7 @@ fn work(
     for _ in 0..samples_per_pixel {
         let u = (w as f64 + random_float(&mut rng, None, None)) / (image_width as f64 - 1.);
         let v = (h as f64 + random_float(&mut rng, None, None)) / (image_height as f64 - 1.);
-        let mut r = Camera::get_ray(&mut rng, camera, u, v);
+        let mut r = Camera::get_ray(&mut rng, &camera, u, v);
         let mut rec = HitRecord::default();
         let mut attenuation = Vec3::default();
         let mut scattered = Ray::default();
@@ -133,7 +133,7 @@ fn work(
         let mut acc = Vec3::new(1., 1., 1.);
         ray_color_iterative(
             &mut r,
-            world,
+            &world,
             &mut rec,
             &mut attenuation,
             &mut scattered,

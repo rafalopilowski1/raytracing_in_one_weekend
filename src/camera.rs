@@ -1,7 +1,7 @@
 use rand::Rng;
 
 use crate::{degrees_to_radians, ray::Ray, vec3::Vec3};
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Camera {
     pub lens_radius: f64,
     pub u: Vec3,
