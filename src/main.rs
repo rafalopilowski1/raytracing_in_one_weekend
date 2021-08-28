@@ -11,10 +11,10 @@ use hittable::{HitRecord, Hittable, HittableList};
 use rand::{Rng, RngCore};
 use ray::Ray;
 
-use std::{error::Error, f64::consts::PI, fs::File, io::BufWriter};
+use std::{error::Error, f64::consts::PI, fs::File, io::BufWriter, time::Instant};
 use vec3::Vec3;
 
-fn random_float<R: Rng + ?Sized>(rng: &mut R, min: Option<f64>, max: Option<f64>) -> f64 {
+fn random_float(rng: &mut dyn RngCore, min: Option<f64>, max: Option<f64>) -> f64 {
     match (min.is_some(), max.is_some()) {
         (true, true) => rng.gen_range(min.unwrap()..max.unwrap()),
         _ => rng.gen_range(0.0..1.0),
@@ -46,16 +46,15 @@ fn ray_color_iterative(
     depth: &mut u8,
 ) {
     loop {
-        if world.hit(*ray, f64::MIN_POSITIVE, f64::INFINITY, rec) {
+        if world.hit(*ray, f64::MIN_POSITIVE, f64::MAX, rec) {
             if rec.material.scatter(rng, ray, rec, attenuation, scattered) {
                 *acc = *acc * *attenuation;
                 *ray = *scattered;
+                *depth -= 1;
                 if *depth == 0 {
                     break;
-                } else {
-                    *depth -= 1;
-                    continue;
                 }
+                continue;
             }
             break;
         }
@@ -75,20 +74,32 @@ fn main() -> Result<(), Box<dyn Error>> {
     let camera: Camera = Camera::default();
 
     // Image
-    let image_width: u32 = 400;
+    let image_width: u32 = 1920;
     let image_height: u32 = (image_width as f64 / camera.aspect_ratio) as u32;
     let mut imgbuf = image::RgbImage::new(image_width, image_height);
 
     // Render
     println!("Rendering...");
     let mut progress: u32 = 0;
+    let mut time1 = Instant::now();
     for (w, h, pixel) in imgbuf.enumerate_pixels_mut() {
-        let pixel_color = work(w, image_width, h, image_height, camera, &world);
+        let pixel_color = work(
+            image_width - w, // TODO: workaround to invert image; investigate why is it needed?
+            image_width,
+            image_height - h, // TODO: workaround to invert image; investigate why is it needed?
+            image_height,
+            camera,
+            &world,
+        );
         *pixel = pixel_color.into();
+
         let progress2 = (w + (image_width * h)) * 100 / (image_height * image_width);
         if progress2 > progress {
-            println!("{}%", progress2);
+            let time2 = Instant::now();
+            let eta = time2.duration_since(time1) * (100 - progress2);
+            println!("{0}% - ETA: {1} sec.", progress2, eta.as_secs());
             progress = progress2;
+            time1 = Instant::now();
         }
     }
 

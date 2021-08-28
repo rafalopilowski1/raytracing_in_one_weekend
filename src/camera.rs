@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::RngCore;
 
 use crate::{degrees_to_radians, ray::Ray, vec3::Vec3};
 #[derive(Clone, Copy)]
@@ -53,7 +53,7 @@ impl Camera {
         }
     }
 
-    pub fn get_ray<R: Rng + ?Sized>(rng: &mut R, camera: Camera, s: f64, t: f64) -> Ray {
+    pub fn get_ray(rng: &mut dyn RngCore, camera: Camera, s: f64, t: f64) -> Ray {
         let rd = Vec3::random_in_unit_disk(rng) * camera.lens_radius;
         let offset = camera.u * rd.x_r + camera.v * rd.y_g;
         Ray::new(

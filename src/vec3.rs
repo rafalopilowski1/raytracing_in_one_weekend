@@ -1,11 +1,10 @@
 use std::{
-    convert::TryInto,
     fmt::Display,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub},
 };
 
 use image::{Pixel, Rgb};
-use rand::Rng;
+use rand::RngCore;
 
 use crate::random_float;
 
@@ -39,7 +38,7 @@ impl Vec3 {
     pub fn unit_vector(v: Vec3) -> Self {
         v / Vec3::length(v)
     }
-    pub fn random<R: Rng + ?Sized>(rng: &mut R, min: Option<f64>, max: Option<f64>) -> Vec3 {
+    pub fn random(rng: &mut dyn RngCore, min: Option<f64>, max: Option<f64>) -> Vec3 {
         let rng_x = random_float(rng, min, max);
         let rng_y = random_float(rng, min, max);
         let rng_z = random_float(rng, min, max);
@@ -49,7 +48,7 @@ impl Vec3 {
             z_b: rng_z,
         }
     }
-    pub fn random_in_unit_sphere<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    pub fn random_in_unit_sphere(rng: &mut dyn RngCore) -> Self {
         loop {
             let p: Vec3 = Vec3::random(rng, Some(-1.0), Some(1.0));
             if Vec3::length_squared(p) >= 1. {
@@ -59,10 +58,10 @@ impl Vec3 {
             }
         }
     }
-    pub fn random_unit_vector<R: Rng + ?Sized>(rng: &mut R) -> Vec3 {
+    pub fn random_unit_vector(rng: &mut dyn RngCore) -> Vec3 {
         Vec3::unit_vector(Vec3::random_in_unit_sphere(rng))
     }
-    pub fn random_in_hemisphere<R: Rng + ?Sized>(rng: &mut R, normal: Vec3) -> Vec3 {
+    pub fn random_in_hemisphere(rng: &mut dyn RngCore, normal: Vec3) -> Vec3 {
         let in_unit_sphere: Vec3 = Vec3::random_in_unit_sphere(rng);
         if Vec3::dot(in_unit_sphere, normal) > 0.0 {
             in_unit_sphere
@@ -70,7 +69,7 @@ impl Vec3 {
             -in_unit_sphere
         }
     }
-    pub fn random_in_unit_disk<R: Rng + ?Sized>(rng: &mut R) -> Vec3 {
+    pub fn random_in_unit_disk(rng: &mut dyn RngCore) -> Vec3 {
         loop {
             let p = Vec3::new(
                 crate::random_float(rng, None, None),

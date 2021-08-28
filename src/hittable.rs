@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use rand::Rng;
+use rand::RngCore;
 
 use crate::{
     material::{Dielectric, Lamberian, Material, Metal},
@@ -47,7 +47,7 @@ impl HittableList {
     pub fn new(objects: Vec<Rc<dyn Hittable>>) -> Self {
         Self { objects }
     }
-    pub fn randon_scene<R: Rng + ?Sized>(rng: &mut R) -> HittableList {
+    pub fn randon_scene(rng: &mut dyn RngCore) -> HittableList {
         let mut world = HittableList::new(vec![]);
         let ground_material = Rc::new(Lamberian::new(Vec3::new(0.5, 0.5, 0.5)));
         world.objects.push(Rc::new(Sphere::new(
