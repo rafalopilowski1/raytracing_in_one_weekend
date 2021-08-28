@@ -15,3 +15,4 @@ Cargo.lock
 
 image.ppm
 image.png
+.vscode/**
