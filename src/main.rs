@@ -106,9 +106,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let camera: Camera = Camera::default();
 
     // Image
-    const IMAGE_WIDTH: u16 = 400;
+    const IMAGE_WIDTH: u16 = 1920;
     let image_height: u16 = (IMAGE_WIDTH as f64 / camera.aspect_ratio) as u16;
-    const SAMPLES_PER_PIXEL: u8 = 200;
+    const SAMPLES_PER_PIXEL: u16 = 500;
     let mut MAX_DEPTH: u8 = 50;
     // Render
 
@@ -124,7 +124,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 let u = (w as f64 + random_float(&mut rng, None, None)) / (IMAGE_WIDTH as f64 - 1.);
                 let v =
                     (h as f64 + random_float(&mut rng, None, None)) / (image_height as f64 - 1.);
-                let mut r = Camera::get_ray(&camera, u, v);
+                let mut r = Camera::get_ray(&mut rng, &camera, u, v);
                 let mut rec = HitRecord::default();
                 let mut attenuation = Vec3::default();
                 let mut scattered = Ray::default();
@@ -153,7 +153,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn write_color(
     buf_writer: &mut BufWriter<File>,
     color: Vec3,
-    samples_per_pixel: u8,
+    samples_per_pixel: u16,
 ) -> Result<usize, std::io::Error> {
     let mut r = color.x;
     let mut g = color.y;

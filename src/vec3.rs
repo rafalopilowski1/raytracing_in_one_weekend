@@ -68,6 +68,20 @@ impl Vec3 {
             -in_unit_sphere
         }
     }
+    pub fn random_in_unit_disk<R: Rng + ?Sized>(rng: &mut R) -> Vec3 {
+        loop {
+            let p = Vec3::new(
+                crate::random_float(rng, None, None),
+                crate::random_float(rng, None, None),
+                0.,
+            );
+            if Vec3::length_squared(p) >= 1. {
+                continue;
+            } else {
+                return p;
+            }
+        }
+    }
     pub fn near_zero(vec: Vec3) -> bool {
         let s = f64::MIN_POSITIVE;
         f64::abs(vec.x) < s && f64::abs(vec.y) < s && f64::abs(vec.z) < s

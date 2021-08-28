@@ -1,7 +1,13 @@
+use rand::Rng;
+
 use crate::{degrees_to_radians, ray::Ray, vec3::Vec3};
 
 pub struct Camera {
-    pub vfov: f64,
+    pub lens_radius: f64,
+    pub u: Vec3,
+    pub v: Vec3,
+    pub w: Vec3,
+
     pub aspect_ratio: f64,
 
     pub origin: Vec3,
@@ -11,24 +17,34 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(aspect_ratio: f64, vfov: f64, lookfrom: Vec3, lookat: Vec3, vup: Vec3) -> Self {
+    pub fn new(
+        lookfrom: Vec3,
+        lookat: Vec3,
+        vup: Vec3,
+        vfov: f64,
+        aspect_ratio: f64,
+        aperture: f64,
+    ) -> Self {
         let theta = degrees_to_radians(vfov);
         let h = f64::tan(theta / 2.0);
         let viewport_height: f64 = 2.0 * h;
         let viewport_width = aspect_ratio * viewport_height;
-
-        //let focal_length = 1.0;
+        let focus_dist = Vec3::length(lookfrom - lookat);
 
         let w = Vec3::unit_vector(lookfrom - lookat);
         let u = Vec3::unit_vector(Vec3::cross(vup, w));
         let v = Vec3::cross(w, u);
 
-        let horizontal = u * viewport_width;
-        let vertical = v * viewport_height;
-        let lower_left_corner = lookfrom - (horizontal / 2.) - (vertical / 2.) - w;
+        let horizontal = u * viewport_width * focus_dist;
+        let vertical = v * viewport_height * focus_dist;
+        let lower_left_corner = lookfrom - (horizontal / 2.) - (vertical / 2.) - w * focus_dist;
 
+        let lens_radius = aperture / 2.;
         Self {
-            vfov,
+            lens_radius,
+            u,
+            v,
+            w,
             aspect_ratio,
             origin: lookfrom,
             horizontal,
@@ -37,22 +53,26 @@ impl Camera {
         }
     }
 
-    pub fn get_ray(camera: &Camera, s: f64, t: f64) -> Ray {
+    pub fn get_ray<R: Rng + ?Sized>(rng: &mut R, camera: &Camera, s: f64, t: f64) -> Ray {
+        let rd = Vec3::random_in_unit_disk(rng) * camera.lens_radius;
+        let offset = camera.u * rd.x + camera.v * rd.y;
         Ray::new(
-            camera.origin,
+            camera.origin + offset,
             camera.lower_left_corner + (camera.horizontal * s) + (camera.vertical * t)
-                - camera.origin,
+                - camera.origin
+                - offset,
         )
     }
 }
 impl Default for Camera {
     fn default() -> Self {
         Camera::new(
-            16.0 / 9.0,
-            20.,
-            Vec3::new(-2.0, 2.0, 1.0),
-            Vec3::new(0., 0., -1.0),
+            Vec3::new(13., 2., 3.),
+            Vec3::new(0., 0., 0.),
             Vec3::new(0., 1., 0.),
+            20.,
+            16.0 / 9.0,
+            0.1,
         )
     }
 }

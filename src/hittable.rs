@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
+use rand::Rng;
+
 use crate::{
-    material::{Lamberian, Material},
+    material::{Dielectric, Lamberian, Material, Metal},
     ray::Ray,
+    sphere::Sphere,
     vec3::Vec3,
 };
 #[derive(Clone)]
@@ -43,6 +46,48 @@ pub struct HittableList {
 impl HittableList {
     pub fn new(objects: Vec<Box<dyn Hittable>>) -> Self {
         Self { objects }
+    }
+    pub fn randon_scene<R: Rng + ?Sized>(rng: &mut R) -> HittableList {
+        let mut world = HittableList::new(vec![]);
+        let ground_material = Arc::new(Lamberian::new(Vec3::new(0.5, 0.5, 0.5)));
+        world.objects.push(Box::new(Sphere::new(
+            Vec3::new(0., -1000., 0.),
+            1000.,
+            ground_material,
+        )));
+        for a in -11..11 {
+            for b in -11..11 {
+                let choose_mat = crate::random_float(rng, None, None);
+                let center = Vec3::new(
+                    a as f64 + 0.9 * crate::random_float(rng, None, None),
+                    0.2,
+                    b as f64 + crate::random_float(rng, None, None),
+                );
+
+                if Vec3::length(center - Vec3::new(4., 0.2, 0.)) > 0.9 {
+                    let mut sphere_material: Option<Arc<dyn Material>> = None;
+                    if choose_mat < 0.8 {
+                        // diffuse
+                        let albedo = Vec3::random(rng, None, None) * Vec3::random(rng, None, None);
+                        sphere_material = Some(Arc::new(Lamberian::new(albedo)));
+                    } else if choose_mat < 0.95 {
+                        // metal
+                        let albedo = Vec3::random(rng, Some(0.5), Some(1.));
+                        let fuzz = crate::random_float(rng, Some(0.), Some(0.5));
+                        sphere_material = Some(Arc::new(Metal::new(albedo, fuzz)));
+                    } else {
+                        // glass
+                        sphere_material = Some(Arc::new(Dielectric::new(1.5)));
+                    }
+                    world.objects.push(Box::new(Sphere::new(
+                        center,
+                        0.2,
+                        sphere_material.unwrap(),
+                    )));
+                }
+            }
+        }
+        world
     }
 }
 
