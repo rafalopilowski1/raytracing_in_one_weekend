@@ -85,22 +85,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // World
 
     //let R = f64::cos(PI / 4.);
-
-    let mut world = HittableList::new(vec![
-        Box::new(Sphere::new(
-            Vec3::new(0.0, -100.5, -1.0),
-            100.,
-            material_ground,
-        )),
-        Box::new(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, material_center)),
-        Box::new(Sphere::new(
-            Vec3::new(-1.0, 0., -1.),
-            0.5,
-            material_left.clone(),
-        )),
-        Box::new(Sphere::new(Vec3::new(-1.0, 0., -1.), -0.45, material_left)),
-        Box::new(Sphere::new(Vec3::new(1., -0., -1.), 0.5, material_right)),
-    ]);
+    let mut rng = rand::thread_rng();
+    let mut world = HittableList::randon_scene(&mut rng);
 
     // Camera
     let camera: Camera = Camera::default();
@@ -115,7 +101,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let file_ppm = File::create("image.ppm")?;
     let mut buf_writer = BufWriter::new(file_ppm);
     buf_writer.write_all(format!("P3\n{0} {1}\n255\n", IMAGE_WIDTH, image_height).as_bytes())?;
-    let mut rng = rand::thread_rng();
     for h in (0..image_height).rev() {
         println!("Scanning lines: {}", image_height - h);
         for w in (0..IMAGE_WIDTH) {
