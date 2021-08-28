@@ -6,6 +6,7 @@ mod sphere;
 mod vec3;
 
 use camera::Camera;
+
 use hittable::{HitRecord, Hittable, HittableList};
 use rand::{Rng, RngCore};
 use ray::Ray;
@@ -14,9 +15,7 @@ use std::{
     error::Error,
     f64::consts::PI,
     fs::File,
-    future::Future,
     io::{BufWriter, Write},
-    sync::Arc,
 };
 use vec3::Vec3;
 
@@ -76,9 +75,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     // World
     let mut rng = rand::thread_rng();
     let world = HittableList::randon_scene(&mut rng);
-    let async_world = Arc::new(world.clone());
+
     // Camera
-    let camera: Arc<Camera> = Arc::new(Camera::default());
+    let camera: Camera = Camera::default();
 
     // Image
     let image_width: u16 = 400;
@@ -99,25 +98,24 @@ fn main() -> Result<(), Box<dyn Error>> {
                 image_width,
                 h,
                 image_height,
-                camera.clone(),
-                async_world.clone(),
+                camera,
+                &world,
             );
 
-            write_color(&mut buf_writer, pixel_color, samples_per_pixel)?;
+            write_color(&mut buf_writer, pixel_color, samples_per_pixel).unwrap();
         }
     }
     println!("Done!");
     Ok(())
 }
-
 fn work(
     samples_per_pixel: u16,
     w: u16,
     image_width: u16,
     h: u16,
     image_height: u16,
-    camera: Arc<Camera>,
-    world: Arc<HittableList>,
+    camera: Camera,
+    world: &HittableList,
 ) -> Vec3 {
     let mut rng = rand::thread_rng();
     let mut pixel_color = Vec3::new(0.0, 0.0, 0.0);
@@ -125,7 +123,7 @@ fn work(
     for _ in 0..samples_per_pixel {
         let u = (w as f64 + random_float(&mut rng, None, None)) / (image_width as f64 - 1.);
         let v = (h as f64 + random_float(&mut rng, None, None)) / (image_height as f64 - 1.);
-        let mut r = Camera::get_ray(&mut rng, &camera, u, v);
+        let mut r = Camera::get_ray(&mut rng, camera, u, v);
         let mut rec = HitRecord::default();
         let mut attenuation = Vec3::default();
         let mut scattered = Ray::default();
@@ -133,7 +131,7 @@ fn work(
         let mut acc = Vec3::new(1., 1., 1.);
         ray_color_iterative(
             &mut r,
-            &world,
+            world,
             &mut rec,
             &mut attenuation,
             &mut scattered,
