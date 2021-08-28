@@ -105,7 +105,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Saving
     println!("Saving...");
-    let file_ppm = File::create("image2.png")?;
+    let file_ppm = File::create("image.png")?;
     let buf_writer = BufWriter::new(file_ppm);
     let enc = image::png::PngEncoder::new(buf_writer);
     enc.encode(&imgbuf, image_width, image_height, image::ColorType::Rgb8)?;
