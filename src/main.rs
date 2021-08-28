@@ -7,7 +7,7 @@ mod vec3;
 
 use camera::Camera;
 use hittable::{HitRecord, Hittable, HittableList};
-use rand::Rng;
+use rand::{Rng, RngCore};
 use ray::Ray;
 use sphere::Sphere;
 
@@ -20,7 +20,7 @@ use std::{
 };
 use vec3::Vec3;
 
-use crate::material::{Dielectric, Lamberian, Metal};
+use crate::material::{Dielectric, Lamberian, Material, Metal};
 
 fn random_float<R: Rng + ?Sized>(rng: &mut R, min: Option<f64>, max: Option<f64>) -> f64 {
     match (min.is_some(), max.is_some()) {
@@ -42,26 +42,36 @@ fn clamp(x: f64, min: f64, max: f64) -> f64 {
     }
     x
 }
-
-fn ray_color(ray: &mut Ray, world: &mut HittableList, depth: u8) -> Vec3 {
-    let mut rec = HitRecord::default();
-    if depth == 0 {
-        return Vec3::default();
-    }
-    if world.hit(*ray, f64::MIN_POSITIVE, f64::INFINITY, &mut rec) {
-        let mut scattered = Ray::default();
-        let mut attenuation = Vec3::default();
-        if rec
-            .material
-            .scatter(ray, &rec, &mut attenuation, &mut scattered)
-        {
-            return attenuation * ray_color(&mut scattered, world, depth - 1);
+#[allow(clippy::too_many_arguments)]
+fn ray_color_iterative(
+    ray: &mut Ray,
+    world: &mut HittableList,
+    rec: &mut HitRecord,
+    attenuation: &mut Vec3,
+    scattered: &mut Ray,
+    acc: &mut Vec3,
+    rng: &mut dyn RngCore,
+    depth: &mut u8,
+) {
+    loop {
+        if world.hit(*ray, f64::MIN_POSITIVE, f64::INFINITY, rec) {
+            if rec.material.scatter(rng, ray, rec, attenuation, scattered) {
+                *acc = *acc * *attenuation;
+                *ray = *scattered;
+                *depth -= 1;
+                if *depth == 0 {
+                    break;
+                } else {
+                    continue;
+                }
+            }
+            break;
         }
-        return Vec3::default();
+        let unit_direction: Vec3 = Vec3::unit_vector(ray.direction);
+        let t = 0.5 * (1.0 + unit_direction.y);
+        *acc = *acc * (Vec3::new(1., 1., 1.) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t);
+        break;
     }
-    let unit_direction: Vec3 = Vec3::unit_vector(ray.direction);
-    let t = 0.5 * (unit_direction.y + 1.0);
-    Vec3::new(1., 1., 1.) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -69,16 +79,27 @@ fn main() -> Result<(), Box<dyn Error>> {
     let material_ground = Arc::new(Lamberian::new(Vec3::new(0.8, 0.8, 0.)));
     let material_center = Arc::new(Lamberian::new(Vec3::new(0.1, 0.2, 0.5)));
 
-    let material_left = Arc::new(Lamberian::new(Vec3::new(0., 0., 1.)));
-    let material_right = Arc::new(Lamberian::new(Vec3::new(1., 0., 0.)));
+    let material_left = Arc::new(Dielectric::new(1.5));
+    let material_right = Arc::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.0));
 
     // World
 
-    let R = f64::cos(PI / 4.);
+    //let R = f64::cos(PI / 4.);
 
     let mut world = HittableList::new(vec![
-        Box::new(Sphere::new(Vec3::new(-R, 0., -1.), -0.4, material_left)),
-        Box::new(Sphere::new(Vec3::new(R, -0., -1.), 0.5, material_right)),
+        Box::new(Sphere::new(
+            Vec3::new(0.0, -100.5, -1.0),
+            100.,
+            material_ground,
+        )),
+        Box::new(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, material_center)),
+        Box::new(Sphere::new(
+            Vec3::new(-1.0, 0., -1.),
+            0.5,
+            material_left.clone(),
+        )),
+        Box::new(Sphere::new(Vec3::new(-1.0, 0., -1.), -0.45, material_left)),
+        Box::new(Sphere::new(Vec3::new(1., -0., -1.), 0.5, material_right)),
     ]);
 
     // Camera
@@ -96,18 +117,30 @@ fn main() -> Result<(), Box<dyn Error>> {
     buf_writer.write_all(format!("P3\n{0} {1}\n255\n", IMAGE_WIDTH, image_height).as_bytes())?;
     let mut rng = rand::thread_rng();
     for h in (0..image_height).rev() {
-        println!("Scanlines remaining: {0}", image_height - h);
-        for w in (0..IMAGE_WIDTH).rev() {
+        println!("Scanning lines: {}", image_height - h);
+        for w in (0..IMAGE_WIDTH) {
             let mut pixel_color = Vec3::new(0.0, 0.0, 0.0);
             for _ in 0..SAMPLES_PER_PIXEL {
                 let u = (w as f64 + random_float(&mut rng, None, None)) / (IMAGE_WIDTH as f64 - 1.);
                 let v =
                     (h as f64 + random_float(&mut rng, None, None)) / (image_height as f64 - 1.);
                 let mut r = Camera::get_ray(&camera, u, v);
-                //let mut rec = HitRecord::default();
-                //let mut attenuation = Vec3::new(0., 0., 0.);
-                //let mut scattered = Ray::default();
-                pixel_color += ray_color(&mut r, &mut world, MAX_DEPTH);
+                let mut rec = HitRecord::default();
+                let mut attenuation = Vec3::default();
+                let mut scattered = Ray::default();
+                // `acc` must be (1,1,1) for multiplication to work;
+                let mut acc = Vec3::new(1., 1., 1.);
+                ray_color_iterative(
+                    &mut r,
+                    &mut world,
+                    &mut rec,
+                    &mut attenuation,
+                    &mut scattered,
+                    &mut acc,
+                    &mut rng,
+                    &mut MAX_DEPTH,
+                );
+                pixel_color += acc;
             }
 
             write_color(&mut buf_writer, pixel_color, SAMPLES_PER_PIXEL)?;
