@@ -55,7 +55,7 @@ impl Camera {
 
     pub fn get_ray<R: Rng + ?Sized>(rng: &mut R, camera: Camera, s: f64, t: f64) -> Ray {
         let rd = Vec3::random_in_unit_disk(rng) * camera.lens_radius;
-        let offset = camera.u * rd.x + camera.v * rd.y;
+        let offset = camera.u * rd.x_r + camera.v * rd.y_g;
         Ray::new(
             camera.origin + offset,
             camera.lower_left_corner + (camera.horizontal * s) + (camera.vertical * t)

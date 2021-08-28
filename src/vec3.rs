@@ -1,38 +1,40 @@
 use std::{
+    convert::TryInto,
     fmt::Display,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub},
 };
 
+use image::{Pixel, Rgb};
 use rand::Rng;
 
 use crate::random_float;
 
 #[derive(PartialEq, PartialOrd, Clone, Copy, Default, Debug)]
 pub struct Vec3 {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x_r: f64,
+    pub y_g: f64,
+    pub z_b: f64,
 }
 
 impl Vec3 {
-    pub fn new(x: f64, y: f64, z: f64) -> Self {
-        Self { x, y, z }
+    pub fn new(x_r: f64, y_g: f64, z_b: f64) -> Self {
+        Self { x_r, y_g, z_b }
     }
     pub fn length(v: Vec3) -> f64 {
         f64::sqrt(Vec3::length_squared(v))
     }
     pub fn length_squared(v: Vec3) -> f64 {
-        v.x.powi(2) + v.y.powi(2) + v.z.powi(2)
+        v.x_r.powi(2) + v.y_g.powi(2) + v.z_b.powi(2)
     }
     pub fn cross(v: Vec3, rhs: Self) -> Self {
         Self {
-            x: v.y * rhs.z - v.z * rhs.y,
-            y: v.z * rhs.x - v.x * rhs.z,
-            z: v.x * rhs.y - v.y * rhs.x,
+            x_r: v.y_g * rhs.z_b - v.z_b * rhs.y_g,
+            y_g: v.z_b * rhs.x_r - v.x_r * rhs.z_b,
+            z_b: v.x_r * rhs.y_g - v.y_g * rhs.x_r,
         }
     }
     pub fn dot(v: Vec3, rhs: Self) -> f64 {
-        v.x * rhs.x + v.y * rhs.y + v.z * rhs.z
+        v.x_r * rhs.x_r + v.y_g * rhs.y_g + v.z_b * rhs.z_b
     }
     pub fn unit_vector(v: Vec3) -> Self {
         v / Vec3::length(v)
@@ -42,9 +44,9 @@ impl Vec3 {
         let rng_y = random_float(rng, min, max);
         let rng_z = random_float(rng, min, max);
         Self {
-            x: rng_x,
-            y: rng_y,
-            z: rng_z,
+            x_r: rng_x,
+            y_g: rng_y,
+            z_b: rng_z,
         }
     }
     pub fn random_in_unit_sphere<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -84,7 +86,7 @@ impl Vec3 {
     }
     pub fn near_zero(vec: Vec3) -> bool {
         let s = f64::MIN_POSITIVE;
-        f64::abs(vec.x) < s && f64::abs(vec.y) < s && f64::abs(vec.z) < s
+        f64::abs(vec.x_r) < s && f64::abs(vec.y_g) < s && f64::abs(vec.z_b) < s
     }
     pub fn reflect(v: Vec3, n: Vec3) -> Vec3 {
         v - n * Vec3::dot(v, n) * 2.
@@ -97,31 +99,61 @@ impl Vec3 {
     }
 }
 
+impl From<Rgb<u8>> for Vec3 {
+    fn from(rgb: Rgb<u8>) -> Self {
+        Self {
+            x_r: f64::from(rgb.0[0]),
+            y_g: f64::from(rgb.0[1]),
+            z_b: f64::from(rgb.0[2]),
+        }
+    }
+}
+
+impl From<Vec3> for Rgb<u8> {
+    fn from(vec: Vec3) -> Self {
+        let mut r = vec.x_r;
+        let mut g = vec.y_g;
+        let mut b = vec.z_b;
+
+        let scale = 1.0 / crate::SAMPLES_PER_PIXEL as f64;
+        r = f64::sqrt(scale * r);
+        g = f64::sqrt(scale * g);
+        b = f64::sqrt(scale * b);
+
+        let ir: u8 = (crate::clamp(r, 0.0, 0.999) * 256.) as u8;
+        let ig: u8 = (crate::clamp(g, 0.0, 0.999) * 256.) as u8;
+        let ib: u8 = (crate::clamp(b, 0.0, 0.999) * 256.) as u8;
+        let arr: [u8; 3] = [ir, ig, ib];
+        let rgb = Rgb::from_slice(&arr);
+        *rgb
+    }
+}
+
 impl Add for Vec3 {
     type Output = Vec3;
 
     fn add(self, rhs: Self) -> Self::Output {
         Self {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-            z: self.z + rhs.z,
+            x_r: self.x_r + rhs.x_r,
+            y_g: self.y_g + rhs.y_g,
+            z_b: self.z_b + rhs.z_b,
         }
     }
 }
 
 impl AddAssign<f64> for Vec3 {
     fn add_assign(&mut self, rhs: f64) {
-        self.x += rhs;
-        self.y += rhs;
-        self.z += rhs;
+        self.x_r += rhs;
+        self.y_g += rhs;
+        self.z_b += rhs;
     }
 }
 
 impl MulAssign<f64> for Vec3 {
     fn mul_assign(&mut self, rhs: f64) {
-        self.x *= rhs;
-        self.y *= rhs;
-        self.z *= rhs;
+        self.x_r *= rhs;
+        self.y_g *= rhs;
+        self.z_b *= rhs;
     }
 }
 
@@ -130,18 +162,18 @@ impl Div<f64> for Vec3 {
 
     fn div(self, rhs: f64) -> Self::Output {
         Self {
-            x: self.x / rhs,
-            y: self.y / rhs,
-            z: self.z / rhs,
+            x_r: self.x_r / rhs,
+            y_g: self.y_g / rhs,
+            z_b: self.z_b / rhs,
         }
     }
 }
 
 impl DivAssign<f64> for Vec3 {
     fn div_assign(&mut self, rhs: f64) {
-        self.x /= rhs;
-        self.y /= rhs;
-        self.z /= rhs;
+        self.x_r /= rhs;
+        self.y_g /= rhs;
+        self.z_b /= rhs;
     }
 }
 impl Mul for Vec3 {
@@ -149,9 +181,9 @@ impl Mul for Vec3 {
 
     fn mul(self, rhs: Self) -> Self::Output {
         Self {
-            x: self.x * rhs.x,
-            y: self.y * rhs.y,
-            z: self.z * rhs.z,
+            x_r: self.x_r * rhs.x_r,
+            y_g: self.y_g * rhs.y_g,
+            z_b: self.z_b * rhs.z_b,
         }
     }
 }
@@ -161,9 +193,9 @@ impl Mul<f64> for Vec3 {
 
     fn mul(self, rhs: f64) -> Self::Output {
         Self {
-            x: self.x * rhs,
-            y: self.y * rhs,
-            z: self.z * rhs,
+            x_r: self.x_r * rhs,
+            y_g: self.y_g * rhs,
+            z_b: self.z_b * rhs,
         }
     }
 }
@@ -173,18 +205,18 @@ impl Sub for Vec3 {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-            z: self.z - rhs.z,
+            x_r: self.x_r - rhs.x_r,
+            y_g: self.y_g - rhs.y_g,
+            z_b: self.z_b - rhs.z_b,
         }
     }
 }
 
 impl AddAssign for Vec3 {
     fn add_assign(&mut self, rhs: Self) {
-        self.x += rhs.x;
-        self.y += rhs.y;
-        self.z += rhs.z;
+        self.x_r += rhs.x_r;
+        self.y_g += rhs.y_g;
+        self.z_b += rhs.z_b;
     }
 }
 
@@ -193,15 +225,15 @@ impl Neg for Vec3 {
 
     fn neg(self) -> Self::Output {
         Self {
-            x: -self.x,
-            y: -self.y,
-            z: -self.z,
+            x_r: -self.x_r,
+            y_g: -self.y_g,
+            z_b: -self.z_b,
         }
     }
 }
 
 impl Display for Vec3 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{0} {1} {2}", self.x, self.y, self.z))
+        f.write_fmt(format_args!("{0} {1} {2}", self.x_r, self.y_g, self.z_b))
     }
 }
