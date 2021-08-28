@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
 use rand::Rng;
 
@@ -12,7 +12,7 @@ use crate::{
 pub struct HitRecord {
     pub p: Vec3,
     pub normal: Vec3,
-    pub material: Arc<dyn Material>,
+    pub material: Rc<dyn Material>,
     pub t: f64,
     pub front_face: bool,
 }
@@ -32,25 +32,25 @@ impl Default for HitRecord {
         Self {
             p: Vec3::default(),
             normal: Vec3::default(),
-            material: Arc::new(Lamberian::new(Vec3::default())),
+            material: Rc::new(Lamberian::new(Vec3::default())),
             t: 0.0,
             front_face: false,
         }
     }
 }
-
+#[derive(Clone)]
 pub struct HittableList {
-    pub objects: Vec<Box<dyn Hittable>>,
+    pub objects: Vec<Rc<dyn Hittable>>,
 }
 
 impl HittableList {
-    pub fn new(objects: Vec<Box<dyn Hittable>>) -> Self {
+    pub fn new(objects: Vec<Rc<dyn Hittable>>) -> Self {
         Self { objects }
     }
     pub fn randon_scene<R: Rng + ?Sized>(rng: &mut R) -> HittableList {
         let mut world = HittableList::new(vec![]);
-        let ground_material = Arc::new(Lamberian::new(Vec3::new(0.5, 0.5, 0.5)));
-        world.objects.push(Box::new(Sphere::new(
+        let ground_material = Rc::new(Lamberian::new(Vec3::new(0.5, 0.5, 0.5)));
+        world.objects.push(Rc::new(Sphere::new(
             Vec3::new(0., -1000., 0.),
             1000.,
             ground_material,
@@ -65,28 +65,42 @@ impl HittableList {
                 );
 
                 if Vec3::length(center - Vec3::new(4., 0.2, 0.)) > 0.9 {
-                    let mut sphere_material: Option<Arc<dyn Material>> = None;
+                    let mut sphere_material: Option<Rc<dyn Material>> = None;
                     if choose_mat < 0.8 {
                         // diffuse
                         let albedo = Vec3::random(rng, None, None) * Vec3::random(rng, None, None);
-                        sphere_material = Some(Arc::new(Lamberian::new(albedo)));
+                        sphere_material = Some(Rc::new(Lamberian::new(albedo)));
                     } else if choose_mat < 0.95 {
                         // metal
                         let albedo = Vec3::random(rng, Some(0.5), Some(1.));
                         let fuzz = crate::random_float(rng, Some(0.), Some(0.5));
-                        sphere_material = Some(Arc::new(Metal::new(albedo, fuzz)));
+                        sphere_material = Some(Rc::new(Metal::new(albedo, fuzz)));
                     } else {
                         // glass
-                        sphere_material = Some(Arc::new(Dielectric::new(1.5)));
+                        sphere_material = Some(Rc::new(Dielectric::new(1.5)));
                     }
-                    world.objects.push(Box::new(Sphere::new(
-                        center,
-                        0.2,
-                        sphere_material.unwrap(),
-                    )));
+                    world
+                        .objects
+                        .push(Rc::new(Sphere::new(center, 0.2, sphere_material.unwrap())));
                 }
             }
         }
+
+        let material1 = Rc::new(Dielectric::new(1.5));
+        let material2 = Rc::new(Lamberian::new(Vec3::new(0.4, 0.2, 0.1)));
+        let material3 = Rc::new(Metal::new(Vec3::new(0.4, 0.2, 0.1), 0.0));
+
+        world
+            .objects
+            .push(Rc::new(Sphere::new(Vec3::new(0., 1., 0.), 1.0, material1)));
+        world.objects.push(Rc::new(Sphere::new(
+            Vec3::new(-4.0, 1., 0.),
+            1.0,
+            material2,
+        )));
+        world
+            .objects
+            .push(Rc::new(Sphere::new(Vec3::new(4.0, 1., 0.), 1.0, material3)));
         world
     }
 }

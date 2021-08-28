@@ -9,18 +9,16 @@ use camera::Camera;
 use hittable::{HitRecord, Hittable, HittableList};
 use rand::{Rng, RngCore};
 use ray::Ray;
-use sphere::Sphere;
 
 use std::{
     error::Error,
     f64::consts::PI,
     fs::File,
+    future::Future,
     io::{BufWriter, Write},
     sync::Arc,
 };
 use vec3::Vec3;
-
-use crate::material::{Dielectric, Lamberian, Material, Metal};
 
 fn random_float<R: Rng + ?Sized>(rng: &mut R, min: Option<f64>, max: Option<f64>) -> f64 {
     match (min.is_some(), max.is_some()) {
@@ -45,7 +43,7 @@ fn clamp(x: f64, min: f64, max: f64) -> f64 {
 #[allow(clippy::too_many_arguments)]
 fn ray_color_iterative(
     ray: &mut Ray,
-    world: &mut HittableList,
+    world: &HittableList,
     rec: &mut HitRecord,
     attenuation: &mut Vec3,
     scattered: &mut Ray,
@@ -75,64 +73,77 @@ fn ray_color_iterative(
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Materials
-    let material_ground = Arc::new(Lamberian::new(Vec3::new(0.8, 0.8, 0.)));
-    let material_center = Arc::new(Lamberian::new(Vec3::new(0.1, 0.2, 0.5)));
-
-    let material_left = Arc::new(Dielectric::new(1.5));
-    let material_right = Arc::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.0));
-
     // World
-
-    //let R = f64::cos(PI / 4.);
     let mut rng = rand::thread_rng();
-    let mut world = HittableList::randon_scene(&mut rng);
-
+    let world = HittableList::randon_scene(&mut rng);
+    let async_world = Arc::new(world.clone());
     // Camera
-    let camera: Camera = Camera::default();
+    let camera: Arc<Camera> = Arc::new(Camera::default());
 
     // Image
-    const IMAGE_WIDTH: u16 = 1920;
-    let image_height: u16 = (IMAGE_WIDTH as f64 / camera.aspect_ratio) as u16;
-    const SAMPLES_PER_PIXEL: u16 = 500;
-    let mut MAX_DEPTH: u8 = 50;
-    // Render
+    let image_width: u16 = 400;
+    let image_height: u16 = (image_width as f64 / camera.aspect_ratio) as u16;
+    let samples_per_pixel: u16 = 100;
 
+    // Render
     let file_ppm = File::create("image.ppm")?;
     let mut buf_writer = BufWriter::new(file_ppm);
-    buf_writer.write_all(format!("P3\n{0} {1}\n255\n", IMAGE_WIDTH, image_height).as_bytes())?;
-    for h in (0..image_height).rev() {
-        println!("Scanning lines: {}", image_height - h);
-        for w in (0..IMAGE_WIDTH) {
-            let mut pixel_color = Vec3::new(0.0, 0.0, 0.0);
-            for _ in 0..SAMPLES_PER_PIXEL {
-                let u = (w as f64 + random_float(&mut rng, None, None)) / (IMAGE_WIDTH as f64 - 1.);
-                let v =
-                    (h as f64 + random_float(&mut rng, None, None)) / (image_height as f64 - 1.);
-                let mut r = Camera::get_ray(&mut rng, &camera, u, v);
-                let mut rec = HitRecord::default();
-                let mut attenuation = Vec3::default();
-                let mut scattered = Ray::default();
-                // `acc` must be (1,1,1) for multiplication to work;
-                let mut acc = Vec3::new(1., 1., 1.);
-                ray_color_iterative(
-                    &mut r,
-                    &mut world,
-                    &mut rec,
-                    &mut attenuation,
-                    &mut scattered,
-                    &mut acc,
-                    &mut rng,
-                    &mut MAX_DEPTH,
-                );
-                pixel_color += acc;
-            }
+    buf_writer.write_all(format!("P3\n{0} {1}\n255\n", image_width, image_height).as_bytes())?;
 
-            write_color(&mut buf_writer, pixel_color, SAMPLES_PER_PIXEL)?;
+    for h in (0..image_height).rev() {
+        println!("Scanning: {}", image_height - h);
+        for w in 0..image_width {
+            let pixel_color = work(
+                samples_per_pixel,
+                w,
+                image_width,
+                h,
+                image_height,
+                camera,
+                async_world,
+            );
+
+            write_color(&mut buf_writer, pixel_color, samples_per_pixel)?;
         }
     }
     println!("Done!");
     Ok(())
+}
+
+fn work(
+    samples_per_pixel: u16,
+    w: u16,
+    image_width: u16,
+    h: u16,
+    image_height: u16,
+    camera: Arc<Camera>,
+    world: Arc<HittableList>,
+) -> Vec3 {
+    let mut rng = rand::thread_rng();
+    let mut pixel_color = Vec3::new(0.0, 0.0, 0.0);
+    let mut max_depth: u8 = 50;
+    for _ in 0..samples_per_pixel {
+        let u = (w as f64 + random_float(&mut rng, None, None)) / (image_width as f64 - 1.);
+        let v = (h as f64 + random_float(&mut rng, None, None)) / (image_height as f64 - 1.);
+        let mut r = Camera::get_ray(&mut rng, camera, u, v);
+        let mut rec = HitRecord::default();
+        let mut attenuation = Vec3::default();
+        let mut scattered = Ray::default();
+        // `acc` must be (1,1,1) for multiplication to work;
+        let mut acc = Vec3::new(1., 1., 1.);
+        ray_color_iterative(
+            &mut r,
+            world,
+            &mut rec,
+            &mut attenuation,
+            &mut scattered,
+            &mut acc,
+            &mut rng,
+            &mut max_depth,
+        );
+        pixel_color += acc;
+    }
+    pixel_color
 }
 
 fn write_color(
