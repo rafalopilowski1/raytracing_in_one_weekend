@@ -25,18 +25,18 @@ use std::{
 use vec3::Vec3;
 
 use crate::vec3::PixelResult;
-
+#[inline]
 fn random_float(rng: &mut dyn RngCore, min: Option<f64>, max: Option<f64>) -> f64 {
     match (min.is_some(), max.is_some()) {
         (true, true) => rng.gen_range(min.unwrap()..max.unwrap()),
         _ => rng.gen_range(0.0..1.0),
     }
 }
-
+#[inline]
 fn degrees_to_radians(degrees: f64) -> f64 {
     degrees * (PI) / 180.0
 }
-
+#[inline]
 fn clamp(x: f64, min: f64, max: f64) -> f64 {
     if x < min {
         return min;
@@ -47,6 +47,7 @@ fn clamp(x: f64, min: f64, max: f64) -> f64 {
     x
 }
 #[allow(clippy::too_many_arguments)]
+#[inline]
 fn ray_color_iterative(
     ray: &mut Ray,
     world: &HittableList,
@@ -155,6 +156,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Done!");
     Ok(())
 }
+#[inline]
 fn work(
     width: u32,
     image_width: u32,
