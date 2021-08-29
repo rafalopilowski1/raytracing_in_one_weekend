@@ -17,7 +17,7 @@ pub struct Camera {
 }
 
 impl Camera {
-    #[inline]
+    #[inline(always)]
     pub fn new(
         lookfrom: Vec3,
         lookat: Vec3,
@@ -53,7 +53,7 @@ impl Camera {
             lower_left_corner,
         }
     }
-    #[inline]
+    #[inline(always)]
     pub fn get_ray(rng: &mut dyn RngCore, camera: Camera, s: f64, t: f64) -> Ray {
         let rd = Vec3::random_in_unit_disk(rng) * camera.lens_radius;
         let offset = camera.u * rd.x_r + camera.v * rd.y_g;
@@ -66,7 +66,7 @@ impl Camera {
     }
 }
 impl Default for Camera {
-    #[inline]
+    #[inline(always)]
     fn default() -> Self {
         Camera::new(
             Vec3::new(13., 2., 3.),

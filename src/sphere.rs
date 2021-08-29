@@ -14,7 +14,7 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    #[inline]
+    #[inline(always)]
     pub fn new(center: Vec3, radius: f64, material: Arc<dyn Material>) -> Self {
         Self {
             center,
@@ -25,7 +25,7 @@ impl Sphere {
 }
 
 impl Hittable for Sphere {
-    #[inline]
+    #[inline(always)]
     fn hit(&self, ray: Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
         let oc = ray.origin - self.center;
         let a: f64 = Vec3::length_squared(ray.direction);

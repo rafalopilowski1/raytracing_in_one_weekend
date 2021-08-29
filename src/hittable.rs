@@ -18,7 +18,7 @@ pub struct HitRecord {
 }
 
 impl HitRecord {
-    #[inline]
+    #[inline(always)]
     pub fn set_face_normal(&mut self, ray: Ray, outward_normal: Vec3) {
         self.front_face = Vec3::dot(ray.direction, outward_normal) < 0.;
         self.normal = if self.front_face {
@@ -29,7 +29,7 @@ impl HitRecord {
     }
 }
 impl Default for HitRecord {
-    #[inline]
+    #[inline(always)]
     fn default() -> Self {
         Self {
             p: Vec3::default(),
@@ -49,7 +49,7 @@ impl HittableList {
     pub fn new(objects: Vec<Arc<dyn Hittable>>) -> Self {
         Self { objects }
     }
-    #[inline]
+    #[inline(always)]
     pub fn randon_scene(rng: &mut dyn RngCore) -> HittableList {
         let mut world = HittableList::new(vec![]);
 
@@ -118,7 +118,7 @@ pub trait Hittable: Send + Sync {
 }
 
 impl Hittable for HittableList {
-    #[inline]
+    #[inline(always)]
     fn hit(&self, ray: Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
         let mut temp_rec = HitRecord::default();
         let mut hit_anything = false;
