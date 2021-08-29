@@ -2,4 +2,4 @@
 
 - output in PNG
 - ETA indicator
-- single-threaded :-(
+- multi-threaded :-)
