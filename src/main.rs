@@ -19,7 +19,7 @@ use std::{
     f64::consts::PI,
     fs::File,
     io::BufWriter,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, RwLock},
     time::Instant,
 };
 use vec3::Vec3;
