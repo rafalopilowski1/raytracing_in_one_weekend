@@ -8,11 +8,23 @@ mod vec3;
 use camera::Camera;
 
 use hittable::{HitRecord, Hittable, HittableList};
+
 use rand::{Rng, RngCore};
 use ray::Ray;
 
-use std::{error::Error, f64::consts::PI, fs::File, io::BufWriter, time::Instant};
+use threadpool::ThreadPool;
+
+use std::{
+    error::Error,
+    f64::consts::PI,
+    fs::File,
+    io::BufWriter,
+    sync::{Arc, Mutex, RwLock},
+    time::Instant,
+};
 use vec3::Vec3;
+
+use crate::vec3::PixelResult;
 
 fn random_float(rng: &mut dyn RngCore, min: Option<f64>, max: Option<f64>) -> f64 {
     match (min.is_some(), max.is_some()) {
@@ -64,42 +76,72 @@ fn ray_color_iterative(
         break;
     }
 }
-const SAMPLES_PER_PIXEL: u32 = 500;
+const SAMPLES_PER_PIXEL: u32 = 100;
 fn main() -> Result<(), Box<dyn Error>> {
     // World
     let mut rng = rand::thread_rng();
-    let world = HittableList::randon_scene(&mut rng);
+    let world = Arc::new(RwLock::new(HittableList::randon_scene(&mut rng)));
 
     // Camera
     let camera: Camera = Camera::default();
 
     // Image
-    let image_width: u32 = 1920;
+    let image_width: u32 = 400;
     let image_height: u32 = (image_width as f64 / camera.aspect_ratio) as u32;
     let mut imgbuf = image::RgbImage::new(image_width, image_height);
 
     // Render
     println!("Rendering...");
     let mut progress: u32 = 0;
+    let pool = ThreadPool::new(num_cpus::get());
+    let (tx, rx) = std::sync::mpsc::channel::<Option<PixelResult>>();
     let mut time1 = Instant::now();
-    for (w, h, pixel) in imgbuf.enumerate_pixels_mut() {
-        let pixel_color = work(
-            image_width - w, // TODO: workaround to invert image; investigate why is it needed?
-            image_width,
-            image_height - h, // TODO: workaround to invert image; investigate why is it needed?
-            image_height,
-            camera,
-            &world,
-        );
-        *pixel = pixel_color.into();
+    // TODO: workaround to invert image; investigate why is it needed?
+    for h in 0..image_height {
+        for w in 0..image_width {
+            let tx = tx.clone();
+            let world = world.clone();
+            pool.execute(move || {
+                let world = world.read();
+                match world {
+                    Ok(world) => {
+                        let pixel_color = work(
+                            image_width - w,
+                            image_width,
+                            h,
+                            image_height,
+                            camera,
+                            &*world,
+                        );
+                        let pixel_result = Some(PixelResult::new(
+                            pixel_color,
+                            image_width - w - 1, // TODO: workaround to invert image; investigate why is it needed?
+                            image_height - h - 1, // TODO: workaround to invert image; investigate why is it needed?
+                        ));
+                        tx.send(pixel_result).unwrap();
+                    }
+                    _ => {
+                        tx.send(None).unwrap();
+                    }
+                }
+            });
+        }
+    }
+    drop(tx);
 
-        let progress2 = (w + (image_width * h)) * 100 / (image_height * image_width);
-        if progress2 > progress {
-            let time2 = Instant::now();
-            let eta = time2.duration_since(time1) * (100 - progress2);
-            println!("{0}% - ETA: {1} sec.", progress2, eta.as_secs());
-            progress = progress2;
-            time1 = Instant::now();
+    for (number, t) in rx.iter().enumerate() {
+        if let Some(t) = t {
+            imgbuf.put_pixel(t.x, t.y, t.color.into());
+            let progress2 = number as u32 * 100 / (image_height * image_width);
+            if progress2 > progress {
+                let time2 = Instant::now();
+                let eta = time2.duration_since(time1) * (100 - progress2);
+                println!("{0}% - ETA: {1} sec.", progress2, eta.as_secs());
+                progress = progress2;
+                time1 = Instant::now();
+            }
+        } else {
+            println!("Oops!");
         }
     }
 

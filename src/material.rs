@@ -2,7 +2,7 @@ use rand::RngCore;
 
 use crate::{hittable::HitRecord, vec3::Vec3, Ray};
 
-pub trait Material {
+pub trait Material: Send + Sync {
     fn scatter(
         &self,
         rng: &mut dyn RngCore,
@@ -16,6 +16,7 @@ pub struct Lamberian {
     albedo: Vec3,
 }
 impl Lamberian {
+    #[inline]
     pub fn new(albedo: Vec3) -> Self {
         Self { albedo }
     }
@@ -26,6 +27,7 @@ pub struct Metal {
     fuzz: f64,
 }
 impl Metal {
+    #[inline]
     pub fn new(albedo: Vec3, fuzz: f64) -> Self {
         Self {
             albedo,
@@ -38,9 +40,11 @@ pub struct Dielectric {
     ir: f64,
 }
 impl Dielectric {
+    #[inline]
     pub fn new(ir: f64) -> Self {
         Self { ir }
     }
+    #[inline]
     pub fn reflactance(cosine: f64, ref_idx: f64) -> f64 {
         let mut r0 = (1. - ref_idx) / (1. + ref_idx);
         r0 = r0 * r0;
@@ -49,6 +53,7 @@ impl Dielectric {
 }
 
 impl Material for Lamberian {
+    #[inline]
     fn scatter(
         &self,
         rng: &mut dyn RngCore,
@@ -68,6 +73,7 @@ impl Material for Lamberian {
 }
 
 impl Material for Metal {
+    #[inline]
     fn scatter(
         &self,
         rng: &mut dyn RngCore,
@@ -87,6 +93,7 @@ impl Material for Metal {
 }
 
 impl Material for Dielectric {
+    #[inline]
     fn scatter(
         &self,
         rng: &mut dyn RngCore,
