@@ -2,4 +2,4 @@
 
 - output in PNG
 - ETA indicator
-- multi-threaded :-)
+- multi-threaded and without shared pointers :-)
