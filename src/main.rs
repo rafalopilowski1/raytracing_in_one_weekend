@@ -69,7 +69,7 @@ fn ray_color_iterative(
         break;
     }
 }
-const SAMPLES_PER_PIXEL: u32 = 100;
+const SAMPLES_PER_PIXEL: u32 = 500;
 fn main() -> Result<(), Box<dyn Error>> {
     // World
     let mut rng = rand::thread_rng();
@@ -80,7 +80,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let camera: Camera = Camera::default();
 
     // Image
-    let image_width: u32 = 400;
+    let image_width: u32 = 1920;
     let image_height: u32 = (image_width as f64 / camera.aspect_ratio) as u32;
     let mut imgbuf = image::RgbImage::new(image_width, image_height);
 
