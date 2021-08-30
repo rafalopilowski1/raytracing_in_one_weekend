@@ -50,7 +50,6 @@ fn ray_color_iterative(
         ) {
             if rec
                 .material
-                .as_ref()
                 .unwrap()
                 .scatter(rng, ray, rec, attenuation, scattered)
             {
