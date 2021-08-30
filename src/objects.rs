@@ -1,5 +1,15 @@
 use crate::{hittable::HitRecord, material::Material, ray::Ray, vec3::Vec3};
 
+pub enum Object {
+    Sphere(Sphere),
+}
+impl Object {
+    pub fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
+        match self {
+            Object::Sphere(sphere) => sphere.hit(ray, t_min, t_max, rec),
+        }
+    }
+}
 pub struct Sphere {
     pub center: Vec3,
     pub radius: f64,
