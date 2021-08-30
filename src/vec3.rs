@@ -144,9 +144,9 @@ impl From<Vec3> for Rgb<u8> {
         g = f64::sqrt(scale * g);
         b = f64::sqrt(scale * b);
 
-        let ir: u8 = (crate::clamp(r, 0.0, f64::MAX) * 256.) as u8;
-        let ig: u8 = (crate::clamp(g, 0.0, f64::MAX) * 256.) as u8;
-        let ib: u8 = (crate::clamp(b, 0.0, f64::MAX) * 256.) as u8;
+        let ir: u8 = (r.clamp(0.0, 1.0) * 256.) as u8;
+        let ig: u8 = (g.clamp(0.0, 1.0) * 256.) as u8;
+        let ib: u8 = (b.clamp(0.0, 1.0) * 256.) as u8;
         let arr: [u8; 3] = [ir, ig, ib];
         let rgb = Rgb::from_slice(&arr);
         *rgb
