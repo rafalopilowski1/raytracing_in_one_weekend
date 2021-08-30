@@ -1,8 +1,8 @@
 mod camera;
 mod hittable;
 mod material;
+mod objects;
 mod ray;
-mod sphere;
 mod vec3;
 
 use camera::Camera;
@@ -80,7 +80,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let camera: Camera = Camera::default();
 
     // Image
-    let image_width: u32 = 1920;
+    let image_width: u32 = 3840;
     let image_height: u32 = (image_width as f64 / camera.aspect_ratio) as u32;
     let mut imgbuf = image::RgbImage::new(image_width, image_height);
 

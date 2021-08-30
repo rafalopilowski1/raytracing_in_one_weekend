@@ -1,9 +1,10 @@
+use crate::objects::Object;
 use rand::RngCore;
 
 use crate::{
     material::{Dielectric, Lamberian, Material, Metal},
+    objects::Sphere,
     ray::Ray,
-    sphere::Sphere,
     vec3::Vec3,
 };
 #[derive(Clone)]
@@ -38,15 +39,15 @@ impl Default for HitRecord {
 }
 
 pub struct HittableList {
-    pub objects: Vec<Sphere>,
+    pub objects: Vec<Object>,
 }
 
 impl HittableList {
-    pub fn new(objects: Vec<Sphere>) -> Self {
+    pub fn new(objects: Vec<Object>) -> Self {
         Self { objects }
     }
     pub fn hit_anything(
-        objects: &[Sphere],
+        objects: &[Object],
         ray: Ray,
         t_min: f64,
         t_max: f64,
@@ -70,11 +71,11 @@ impl HittableList {
         let mut world = HittableList::new(vec![]);
 
         let ground_material = Material::Lamberian(Lamberian::new(Vec3::new(0.5, 0.5, 0.5)));
-        world.objects.push(Sphere::new(
+        world.objects.push(Object::Sphere(Sphere::new(
             Vec3::new(0., -1000., 0.),
             1000.,
             ground_material,
-        ));
+        )));
         for a in -11..11 {
             for b in -11..11 {
                 let choose_mat = crate::random_float(rng, None, None);
@@ -99,9 +100,11 @@ impl HittableList {
                         // glass
                         sphere_material = Some(Material::Dielectric(Dielectric::new(1.5)));
                     }
-                    world
-                        .objects
-                        .push(Sphere::new(center, 0.2, sphere_material.unwrap()));
+                    world.objects.push(Object::Sphere(Sphere::new(
+                        center,
+                        0.2,
+                        sphere_material.unwrap(),
+                    )));
                 }
             }
         }
@@ -110,15 +113,21 @@ impl HittableList {
         let material2 = Material::Lamberian(Lamberian::new(Vec3::new(0.4, 0.2, 0.1)));
         let material3 = Material::Metal(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0));
 
-        world
-            .objects
-            .push(Sphere::new(Vec3::new(0., 1., 0.), 1.0, material1));
-        world
-            .objects
-            .push(Sphere::new(Vec3::new(-4.0, 1., 0.), 1.0, material2));
-        world
-            .objects
-            .push(Sphere::new(Vec3::new(4.0, 1., 0.), 1.0, material3));
+        world.objects.push(Object::Sphere(Sphere::new(
+            Vec3::new(0., 1., 0.),
+            1.0,
+            material1,
+        )));
+        world.objects.push(Object::Sphere(Sphere::new(
+            Vec3::new(-4.0, 1., 0.),
+            1.0,
+            material2,
+        )));
+        world.objects.push(Object::Sphere(Sphere::new(
+            Vec3::new(4.0, 1., 0.),
+            1.0,
+            material3,
+        )));
         world
     }
 }
