@@ -22,42 +22,40 @@ pub struct PixelResult {
 }
 
 impl PixelResult {
-    #[inline(always)]
     pub fn new(color: Vec3, x: u32, y: u32) -> Self {
         Self { color, x, y }
     }
 }
 
 impl Vec3 {
-    #[inline(always)]
     pub fn new(x_r: f64, y_g: f64, z_b: f64) -> Self {
         Self { x_r, y_g, z_b }
     }
-    #[inline(always)]
-    pub fn length(v: Vec3) -> f64 {
+
+    pub fn length(v: Self) -> f64 {
         f64::sqrt(Vec3::length_squared(v))
     }
-    #[inline(always)]
+
     pub fn length_squared(v: Vec3) -> f64 {
-        v.x_r.powi(2) + v.y_g.powi(2) + v.z_b.powi(2)
+        v.x_r * v.x_r + v.y_g * v.y_g + v.z_b * v.z_b
     }
-    #[inline(always)]
-    pub fn cross(v: Vec3, rhs: Self) -> Self {
+
+    pub fn cross(v: Self, rhs: Self) -> Self {
         Self {
             x_r: v.y_g * rhs.z_b - v.z_b * rhs.y_g,
             y_g: v.z_b * rhs.x_r - v.x_r * rhs.z_b,
             z_b: v.x_r * rhs.y_g - v.y_g * rhs.x_r,
         }
     }
-    #[inline(always)]
-    pub fn dot(v: Vec3, rhs: Self) -> f64 {
+
+    pub fn dot(v: Self, rhs: Self) -> f64 {
         v.x_r * rhs.x_r + v.y_g * rhs.y_g + v.z_b * rhs.z_b
     }
-    #[inline(always)]
+
     pub fn unit_vector(v: Vec3) -> Self {
         v / Vec3::length(v)
     }
-    #[inline(always)]
+
     pub fn random(rng: &mut dyn RngCore, min: Option<f64>, max: Option<f64>) -> Vec3 {
         let rng_x = random_float(rng, min, max);
         let rng_y = random_float(rng, min, max);
@@ -68,7 +66,7 @@ impl Vec3 {
             z_b: rng_z,
         }
     }
-    #[inline(always)]
+
     pub fn random_in_unit_sphere(rng: &mut dyn RngCore) -> Self {
         loop {
             let p: Vec3 = Vec3::random(rng, Some(-1.0), Some(1.0));
@@ -79,11 +77,11 @@ impl Vec3 {
             }
         }
     }
-    #[inline(always)]
+
     pub fn random_unit_vector(rng: &mut dyn RngCore) -> Vec3 {
         Vec3::unit_vector(Vec3::random_in_unit_sphere(rng))
     }
-    #[inline(always)]
+
     pub fn random_in_hemisphere(rng: &mut dyn RngCore, normal: Vec3) -> Vec3 {
         let in_unit_sphere: Vec3 = Vec3::random_in_unit_sphere(rng);
         if Vec3::dot(in_unit_sphere, normal) > 0.0 {
@@ -92,7 +90,7 @@ impl Vec3 {
             -in_unit_sphere
         }
     }
-    #[inline(always)]
+
     pub fn random_in_unit_disk(rng: &mut dyn RngCore) -> Vec3 {
         loop {
             let p = Vec3::new(
@@ -107,17 +105,17 @@ impl Vec3 {
             }
         }
     }
-    #[inline(always)]
-    pub fn near_zero(vec: Vec3) -> bool {
+
+    pub fn near_zero(vec: Self) -> bool {
         let s = f64::MIN_POSITIVE;
         f64::abs(vec.x_r) < s && f64::abs(vec.y_g) < s && f64::abs(vec.z_b) < s
     }
-    #[inline(always)]
-    pub fn reflect(v: Vec3, n: Vec3) -> Vec3 {
+
+    pub fn reflect(v: Self, n: Self) -> Vec3 {
         v - n * Vec3::dot(v, n) * 2.
     }
-    #[inline(always)]
-    pub fn reflact(uv: Vec3, n: Vec3, etai_over_etat: f64) -> Vec3 {
+
+    pub fn reflact(uv: Self, n: Self, etai_over_etat: f64) -> Self {
         let cos_theta = f64::min(Vec3::dot(-uv, n), 1.0);
         let r_out_perp = (uv + n * cos_theta) * etai_over_etat;
         let r_out_parallel = n * -f64::sqrt(f64::abs(1.0 - Vec3::length_squared(r_out_perp)));
@@ -126,7 +124,6 @@ impl Vec3 {
 }
 
 impl From<Rgb<u8>> for Vec3 {
-    #[inline(always)]
     fn from(rgb: Rgb<u8>) -> Self {
         Self {
             x_r: f64::from(rgb.0[0]),
@@ -137,7 +134,6 @@ impl From<Rgb<u8>> for Vec3 {
 }
 
 impl From<Vec3> for Rgb<u8> {
-    #[inline(always)]
     fn from(vec: Vec3) -> Self {
         let mut r = vec.x_r;
         let mut g = vec.y_g;
@@ -159,7 +155,7 @@ impl From<Vec3> for Rgb<u8> {
 
 impl Add for Vec3 {
     type Output = Vec3;
-    #[inline(always)]
+
     fn add(self, rhs: Self) -> Self::Output {
         Self {
             x_r: self.x_r + rhs.x_r,
@@ -170,7 +166,6 @@ impl Add for Vec3 {
 }
 
 impl AddAssign<f64> for Vec3 {
-    #[inline(always)]
     fn add_assign(&mut self, rhs: f64) {
         self.x_r += rhs;
         self.y_g += rhs;
@@ -179,7 +174,6 @@ impl AddAssign<f64> for Vec3 {
 }
 
 impl MulAssign<f64> for Vec3 {
-    #[inline(always)]
     fn mul_assign(&mut self, rhs: f64) {
         self.x_r *= rhs;
         self.y_g *= rhs;
@@ -189,7 +183,7 @@ impl MulAssign<f64> for Vec3 {
 
 impl Div<f64> for Vec3 {
     type Output = Vec3;
-    #[inline(always)]
+
     fn div(self, rhs: f64) -> Self::Output {
         Self {
             x_r: self.x_r / rhs,
@@ -200,7 +194,6 @@ impl Div<f64> for Vec3 {
 }
 
 impl DivAssign<f64> for Vec3 {
-    #[inline(always)]
     fn div_assign(&mut self, rhs: f64) {
         self.x_r /= rhs;
         self.y_g /= rhs;
@@ -209,7 +202,7 @@ impl DivAssign<f64> for Vec3 {
 }
 impl Mul for Vec3 {
     type Output = Vec3;
-    #[inline(always)]
+
     fn mul(self, rhs: Self) -> Self::Output {
         Self {
             x_r: self.x_r * rhs.x_r,
@@ -221,7 +214,6 @@ impl Mul for Vec3 {
 
 impl Mul<f64> for Vec3 {
     type Output = Vec3;
-    #[inline(always)]
 
     fn mul(self, rhs: f64) -> Self::Output {
         Self {
@@ -234,7 +226,6 @@ impl Mul<f64> for Vec3 {
 
 impl Sub for Vec3 {
     type Output = Vec3;
-    #[inline(always)]
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
@@ -246,7 +237,6 @@ impl Sub for Vec3 {
 }
 
 impl AddAssign for Vec3 {
-    #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         self.x_r += rhs.x_r;
         self.y_g += rhs.y_g;
@@ -256,7 +246,7 @@ impl AddAssign for Vec3 {
 
 impl Neg for Vec3 {
     type Output = Vec3;
-    #[inline(always)]
+
     fn neg(self) -> Self::Output {
         Self {
             x_r: -self.x_r,
@@ -267,7 +257,6 @@ impl Neg for Vec3 {
 }
 
 impl Display for Vec3 {
-    #[inline(always)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{0} {1} {2}", self.x_r, self.y_g, self.z_b))
     }

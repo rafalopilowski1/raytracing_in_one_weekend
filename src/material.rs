@@ -1,59 +1,41 @@
 use rand::RngCore;
 
 use crate::{hittable::HitRecord, vec3::Vec3, Ray};
-
-pub trait Material: Send + Sync {
-    fn scatter(
+#[derive(Clone, Copy)]
+pub enum Material {
+    Lamberian(Lamberian),
+    Metal(Metal),
+    Dielectric(Dielectric),
+}
+impl Material {
+    pub fn scatter(
         &self,
         rng: &mut dyn RngCore,
         ray_in: &Ray,
         rec: &HitRecord,
         attenuation: &mut Vec3,
         scattered: &mut Ray,
-    ) -> bool;
-}
-pub struct Lamberian {
-    albedo: Vec3,
-}
-impl Lamberian {
-    #[inline(always)]
-    pub fn new(albedo: Vec3) -> Self {
-        Self { albedo }
-    }
-}
-
-pub struct Metal {
-    albedo: Vec3,
-    fuzz: f64,
-}
-impl Metal {
-    #[inline(always)]
-    pub fn new(albedo: Vec3, fuzz: f64) -> Self {
-        Self {
-            albedo,
-            fuzz: if fuzz < 1. { fuzz } else { 1. },
+    ) -> bool {
+        match self {
+            Material::Lamberian(lamberian) => {
+                lamberian.scatter(rng, ray_in, rec, attenuation, scattered)
+            }
+            Material::Metal(metal) => metal.scatter(rng, ray_in, rec, attenuation, scattered),
+            Material::Dielectric(dielectric) => {
+                dielectric.scatter(rng, ray_in, rec, attenuation, scattered)
+            }
         }
     }
 }
 
-pub struct Dielectric {
-    ir: f64,
+#[derive(Clone, Copy)]
+pub struct Lamberian {
+    albedo: Vec3,
 }
-impl Dielectric {
-    #[inline(always)]
-    pub fn new(ir: f64) -> Self {
-        Self { ir }
+impl Lamberian {
+    pub fn new(albedo: Vec3) -> Self {
+        Self { albedo }
     }
-    #[inline(always)]
-    pub fn reflactance(cosine: f64, ref_idx: f64) -> f64 {
-        let mut r0 = (1. - ref_idx) / (1. + ref_idx);
-        r0 = r0 * r0;
-        r0 * (1. - r0) * f64::powf(1. - cosine, 5.0)
-    }
-}
-
-impl Material for Lamberian {
-    #[inline(always)]
     fn scatter(
         &self,
         rng: &mut dyn RngCore,
@@ -71,9 +53,18 @@ impl Material for Lamberian {
         true
     }
 }
-
-impl Material for Metal {
-    #[inline(always)]
+#[derive(Clone, Copy)]
+pub struct Metal {
+    albedo: Vec3,
+    fuzz: f64,
+}
+impl Metal {
+    pub fn new(albedo: Vec3, fuzz: f64) -> Self {
+        Self {
+            albedo,
+            fuzz: if fuzz < 1. { fuzz } else { 1. },
+        }
+    }
     fn scatter(
         &self,
         rng: &mut dyn RngCore,
@@ -92,8 +83,20 @@ impl Material for Metal {
     }
 }
 
-impl Material for Dielectric {
-    #[inline(always)]
+#[derive(Clone, Copy)]
+pub struct Dielectric {
+    ir: f64,
+}
+impl Dielectric {
+    pub fn new(ir: f64) -> Self {
+        Self { ir }
+    }
+
+    pub fn reflactance(cosine: f64, ref_idx: f64) -> f64 {
+        let mut r0 = (1. - ref_idx) / (1. + ref_idx);
+        r0 = r0 * r0;
+        r0 * (1. - r0) * f64::powf(1. - cosine, 5.0)
+    }
     fn scatter(
         &self,
         rng: &mut dyn RngCore,

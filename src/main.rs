@@ -7,36 +7,27 @@ mod vec3;
 
 use camera::Camera;
 
-use hittable::{HitRecord, Hittable, HittableList};
+use hittable::{HitRecord, HittableList};
 
 use rand::{Rng, RngCore};
 use ray::Ray;
 
-use threadpool::ThreadPool;
-
-use std::{
-    error::Error,
-    f64::consts::PI,
-    fs::File,
-    io::BufWriter,
-    sync::{Arc, RwLock},
-    time::Instant,
-};
+use std::{error::Error, f64::consts::PI, fs::File, io::BufWriter, sync::Arc, time::Instant};
 use vec3::Vec3;
 
 use crate::vec3::PixelResult;
-#[inline(always)]
+
 fn random_float(rng: &mut dyn RngCore, min: Option<f64>, max: Option<f64>) -> f64 {
     match (min.is_some(), max.is_some()) {
         (true, true) => rng.gen_range(min.unwrap()..max.unwrap()),
         _ => rng.gen_range(0.0..1.0),
     }
 }
-#[inline(always)]
+
 fn degrees_to_radians(degrees: f64) -> f64 {
     degrees * (PI) / 180.0
 }
-#[inline(always)]
+
 fn clamp(x: f64, min: f64, max: f64) -> f64 {
     if x < min {
         return min;
@@ -47,7 +38,7 @@ fn clamp(x: f64, min: f64, max: f64) -> f64 {
     x
 }
 #[allow(clippy::too_many_arguments)]
-#[inline(always)]
+
 fn ray_color_iterative(
     ray: &mut Ray,
     world: &HittableList,
@@ -59,8 +50,19 @@ fn ray_color_iterative(
     depth: &mut u8,
 ) {
     loop {
-        if world.hit(*ray, f64::MIN_POSITIVE, f64::MAX, rec) {
-            if rec.material.scatter(rng, ray, rec, attenuation, scattered) {
+        if HittableList::hit_anything(
+            world.objects.as_slice(),
+            *ray,
+            f64::MIN_POSITIVE,
+            f64::MAX,
+            rec,
+        ) {
+            if rec
+                .material
+                .as_ref()
+                .unwrap()
+                .scatter(rng, ray, rec, attenuation, scattered)
+            {
                 *acc = *acc * *attenuation;
                 *ray = *scattered;
                 *depth -= 1;
@@ -77,57 +79,53 @@ fn ray_color_iterative(
         break;
     }
 }
-const SAMPLES_PER_PIXEL: u32 = 500;
+const SAMPLES_PER_PIXEL: u32 = 100;
 fn main() -> Result<(), Box<dyn Error>> {
     // World
     let mut rng = rand::thread_rng();
-    let world = Arc::new(RwLock::new(HittableList::randon_scene(&mut rng)));
+    let world = Arc::new(HittableList::randon_scene(&mut rng));
+    drop(rng);
 
     // Camera
     let camera: Camera = Camera::default();
 
     // Image
-    let image_width: u32 = 1920;
+    let image_width: u32 = 400;
     let image_height: u32 = (image_width as f64 / camera.aspect_ratio) as u32;
     let mut imgbuf = image::RgbImage::new(image_width, image_height);
 
     // Render
     println!("Rendering...");
     let mut progress: u32 = 0;
-    let pool = ThreadPool::new(num_cpus::get());
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(num_cpus::get() - 1)
+        .build()?;
     let (tx, rx) = std::sync::mpsc::channel::<Option<PixelResult>>();
     let mut time1 = Instant::now();
     // TODO: workaround to invert image; investigate why is it needed?
     for h in 0..image_height {
         for w in 0..image_width {
-            let tx = tx.clone();
             let world = world.clone();
-            pool.execute(move || {
-                let world = world.read();
-                match world {
-                    Ok(world) => {
-                        let pixel_color = work(
-                            image_width - w,
-                            image_width,
-                            h,
-                            image_height,
-                            camera,
-                            &*world,
-                        );
-                        let pixel_result = Some(PixelResult::new(
-                            pixel_color,
-                            image_width - w - 1, // TODO: workaround to invert image; investigate why is it needed?
-                            image_height - h - 1, // TODO: workaround to invert image; investigate why is it needed?
-                        ));
-                        tx.send(pixel_result).unwrap();
-                    }
-                    _ => {
-                        tx.send(None).unwrap();
-                    }
-                }
+            let tx = tx.clone();
+            pool.spawn(move || {
+                let pixel_color = work(
+                    image_width - w,
+                    image_width,
+                    h,
+                    image_height,
+                    camera,
+                    &world,
+                );
+                let pixel_result = Some(PixelResult::new(
+                    pixel_color,
+                    image_width - w - 1, // TODO: workaround to invert image; investigate why is it needed?
+                    image_height - h - 1, // TODO: workaround to invert image; investigate why is it needed?
+                ));
+                tx.send(pixel_result).unwrap();
             });
         }
     }
+
     drop(tx);
 
     for (number, t) in rx.iter().enumerate() {
@@ -156,7 +154,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Done!");
     Ok(())
 }
-#[inline(always)]
+
 fn work(
     width: u32,
     image_width: u32,
