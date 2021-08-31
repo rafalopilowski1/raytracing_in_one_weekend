@@ -1,4 +1,7 @@
-use crate::objects::Object;
+use crate::{
+    objects::{MovingSphere, Object},
+    random_float,
+};
 use rand::RngCore;
 
 use crate::{
@@ -91,6 +94,17 @@ impl HittableList {
                         // diffuse
                         let albedo = Vec3::random(rng, None, None) * Vec3::random(rng, None, None);
                         sphere_material = Some(Material::Lamberian(Lamberian::new(albedo)));
+                        let center2 =
+                            center + Vec3::new(0., random_float(rng, Some(0.), Some(0.5)), 0.);
+                        world.objects.push(Object::MovingSphere(MovingSphere::new(
+                            center,
+                            center2,
+                            0.0,
+                            1.0,
+                            0.2,
+                            sphere_material.unwrap(),
+                        )));
+                        continue;
                     } else if choose_mat < 0.95 {
                         // metal
                         let albedo = Vec3::random(rng, Some(0.5), Some(1.));

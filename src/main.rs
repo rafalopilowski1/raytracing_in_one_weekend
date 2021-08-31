@@ -5,6 +5,7 @@ mod objects;
 mod ray;
 mod vec3;
 
+use crate::objects::Object;
 use camera::Camera;
 
 use hittable::{HitRecord, HittableList};
@@ -16,6 +17,11 @@ use std::{error::Error, f64::consts::PI, fs::File, io::BufWriter, sync::Arc, tim
 use vec3::Vec3;
 
 use crate::vec3::PixelResult;
+
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 fn random_float(rng: &mut dyn RngCore, min: Option<f64>, max: Option<f64>) -> f64 {
     match (min.is_some(), max.is_some()) {
@@ -32,7 +38,7 @@ fn degrees_to_radians(degrees: f64) -> f64 {
 
 fn ray_color_iterative(
     ray: &mut Ray,
-    world: &HittableList,
+    objects: &[Object],
     rec: &mut HitRecord,
     attenuation: &mut Vec3,
     scattered: &mut Ray,
@@ -41,13 +47,7 @@ fn ray_color_iterative(
     depth: &mut u8,
 ) {
     loop {
-        if HittableList::hit_anything(
-            world.objects.as_slice(),
-            *ray,
-            f64::MIN_POSITIVE,
-            f64::MAX,
-            rec,
-        ) {
+        if HittableList::hit_anything(objects, *ray, f64::MIN_POSITIVE, f64::MAX, rec) {
             if rec
                 .material
                 .unwrap()
@@ -69,7 +69,7 @@ fn ray_color_iterative(
         break;
     }
 }
-const SAMPLES_PER_PIXEL: u32 = 500;
+const SAMPLES_PER_PIXEL: u32 = 100;
 fn main() -> Result<(), Box<dyn Error>> {
     // World
     let mut rng = rand::thread_rng();
@@ -80,7 +80,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let camera: Camera = Camera::default();
 
     // Image
-    let image_width: u32 = 3840;
+    let image_width: u32 = 400;
     let image_height: u32 = (image_width as f64 / camera.aspect_ratio) as u32;
     let mut imgbuf = image::RgbImage::new(image_width, image_height);
 
@@ -136,7 +136,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Saving
     println!("Saving...");
-    let file_ppm = File::create("image.png")?;
+    let file_ppm = File::create("image3.png")?;
     let buf_writer = BufWriter::new(file_ppm);
     let enc = image::png::PngEncoder::new(buf_writer);
     enc.encode(&imgbuf, image_width, image_height, image::ColorType::Rgb8)?;
@@ -156,6 +156,7 @@ fn work(
     let mut rng = rand::thread_rng();
     let mut pixel_color = Vec3::new(0.0, 0.0, 0.0);
     let mut max_depth: u8 = 50;
+    let objects = world.objects.as_slice();
     for _ in 0..SAMPLES_PER_PIXEL {
         let u = (width as f64 + random_float(&mut rng, None, None)) / (image_width as f64 - 1.);
         let v = (height as f64 + random_float(&mut rng, None, None)) / (image_height as f64 - 1.);
@@ -167,7 +168,7 @@ fn work(
         let mut acc = Vec3::new(1., 1., 1.);
         ray_color_iterative(
             &mut ray,
-            world,
+            objects,
             &mut rec,
             &mut attenuation,
             &mut scattered,

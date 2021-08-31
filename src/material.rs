@@ -39,7 +39,7 @@ impl Lamberian {
     fn scatter(
         &self,
         rng: &mut dyn RngCore,
-        _ray_in: &Ray,
+        ray_in: &Ray,
         rec: &HitRecord,
         attenuation: &mut Vec3,
         scattered: &mut Ray,
@@ -48,7 +48,7 @@ impl Lamberian {
         if Vec3::near_zero(scatter_direction) {
             scatter_direction = rec.normal;
         }
-        *scattered = Ray::new(rec.p, scatter_direction);
+        *scattered = Ray::new(rec.p, scatter_direction, ray_in.time);
         *attenuation = self.albedo;
         true
     }
@@ -77,6 +77,7 @@ impl Metal {
         *scattered = Ray::new(
             rec.p,
             reflected + Vec3::random_in_unit_sphere(rng) * self.fuzz,
+            ray_in.time,
         );
         *attenuation = self.albedo;
         Vec3::dot(scattered.direction, rec.normal) > 0.
@@ -128,7 +129,7 @@ impl Dielectric {
             direction = Vec3::reflact(unit_direction, rec.normal, refraction_ratio);
         }
 
-        *scattered = Ray::new(rec.p, direction);
+        *scattered = Ray::new(rec.p, direction, ray_in.time);
         true
     }
 }
