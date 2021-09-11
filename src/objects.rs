@@ -92,8 +92,8 @@ impl Sphere {
     }
 
     pub fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
-        let oc = ray.origin - self.center;
         let a: f64 = Vec3::length_squared(ray.direction);
+        let oc = ray.origin - self.center;
         let half_b: f64 = Vec3::dot(oc, ray.direction);
         let c: f64 = Vec3::length_squared(oc) - self.radius * self.radius;
         let discriminant = half_b * half_b - a * c;

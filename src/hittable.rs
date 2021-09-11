@@ -51,19 +51,17 @@ impl HittableList {
     }
     pub fn hit_anything(
         objects: &[Object],
-        ray: Ray,
+        ray: &Ray,
         t_min: f64,
         t_max: f64,
         rec: &mut HitRecord,
     ) -> bool {
-        let mut temp_rec = HitRecord::default();
         let mut hit_anything = false;
         let mut closest_so_far = t_max;
 
         for object in objects {
-            if object.hit(&ray, t_min, closest_so_far, &mut temp_rec) {
+            if object.hit(ray, t_min, closest_so_far, rec) {
                 hit_anything = true;
-                rec.clone_from(&temp_rec);
                 closest_so_far = rec.t;
             }
         }

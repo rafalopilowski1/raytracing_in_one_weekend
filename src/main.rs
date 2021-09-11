@@ -13,7 +13,16 @@ use hittable::{HitRecord, HittableList};
 use rand::{Rng, RngCore};
 use ray::Ray;
 
-use std::{error::Error, f64::consts::PI, fs::File, io::BufWriter, sync::Arc, time::Instant};
+use std::{
+    error::Error,
+    f64::consts::PI,
+    fs::File,
+    io::BufWriter,
+    mem::swap,
+    sync::Arc,
+    thread,
+    time::{Duration, Instant},
+};
 use vec3::Vec3;
 
 use crate::vec3::PixelResult;
@@ -44,18 +53,18 @@ fn ray_color_iterative(
     scattered: &mut Ray,
     acc: &mut Vec3,
     rng: &mut dyn RngCore,
-    depth: &mut u8,
+    depth: &mut i8,
 ) {
     loop {
-        if HittableList::hit_anything(objects, *ray, f64::MIN_POSITIVE, f64::MAX, rec) {
+        if HittableList::hit_anything(objects, ray, f64::MIN_POSITIVE, f64::MAX, rec) {
             if rec
                 .material
                 .unwrap()
                 .scatter(rng, ray, rec, attenuation, scattered)
             {
                 *acc = *acc * *attenuation;
-                *ray = *scattered;
-                *depth -= 1;
+                swap(ray, scattered);
+                *depth = depth.checked_sub(1).unwrap_or(0);
                 if *depth == 0 {
                     break;
                 }
@@ -86,13 +95,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Render
     println!("Rendering...");
+
     let mut progress: u32 = 0;
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(num_cpus::get() - 1)
+        .thread_name(|idx| format!("Thread {}", idx))
         .build()?;
     let (tx, rx) = std::sync::mpsc::channel::<Option<PixelResult>>();
     let mut time1 = Instant::now();
-    // TODO: workaround to invert image; investigate why is it needed?
     for h in 0..image_height {
         for w in 0..image_width {
             let world = world.clone();
@@ -155,7 +165,7 @@ fn work(
 ) -> Vec3 {
     let mut rng = rand::thread_rng();
     let mut pixel_color = Vec3::new(0.0, 0.0, 0.0);
-    let mut max_depth: u8 = 50;
+    let mut max_depth: i8 = 50;
     let objects = world.objects.as_slice();
     for _ in 0..SAMPLES_PER_PIXEL {
         let u = (width as f64 + random_float(&mut rng, None, None)) / (image_width as f64 - 1.);
