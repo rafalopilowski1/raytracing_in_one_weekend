@@ -117,17 +117,17 @@ impl Dielectric {
         let cos_theta = f64::min(Vec3::dot(-unit_direction, rec.normal), 1.0);
         let sin_theta = f64::sqrt(1.0 - cos_theta * cos_theta);
 
-        let direction: Vec3;
+        
         let cannot_refract = refraction_ratio * sin_theta > 1.0;
-
+let direction: Vec3 =
         if cannot_refract
             || Dielectric::reflactance(cos_theta, refraction_ratio)
                 > crate::random_float(rng, None, None)
         {
-            direction = Vec3::reflect(unit_direction, rec.normal);
+            Vec3::reflect(unit_direction, rec.normal)
         } else {
-            direction = Vec3::reflact(unit_direction, rec.normal, refraction_ratio);
-        }
+            Vec3::reflact(unit_direction, rec.normal, refraction_ratio)
+        };
 
         *scattered = Ray::new(rec.p, direction, ray_in.time);
         true

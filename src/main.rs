@@ -10,6 +10,7 @@ use camera::Camera;
 
 use hittable::{HitRecord, HittableList};
 
+use image::ImageEncoder;
 use rand::{Rng, RngCore};
 use ray::Ray;
 
@@ -148,8 +149,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Saving...");
     let file_ppm = File::create("image3.png")?;
     let buf_writer = BufWriter::new(file_ppm);
-    let enc = image::png::PngEncoder::new(buf_writer);
-    enc.encode(&imgbuf, image_width, image_height, image::ColorType::Rgb8)?;
+    let enc = image::codecs::png::PngEncoder::new(buf_writer);
+    enc.write_image(&imgbuf, image_width, image_height, image::ColorType::Rgb8)?;
 
     println!("Done!");
     Ok(())
