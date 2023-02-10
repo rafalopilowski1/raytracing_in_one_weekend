@@ -43,30 +43,41 @@ fn ray_color_iterative(
     rec: &mut HitRecord,
     attenuation: &mut Vec3,
     scattered: &mut Ray,
+    background: &mut Vec3,
+    emitted: &mut Vec3,
     acc: &mut Vec3,
     rng: &mut Random<f64>,
     depth: &mut i8,
 ) {
-    while hittable_list.hit(ray, f64::MIN_POSITIVE, f64::MAX, rec) {
-        if rec
-            .material
-            .as_ref()
-            .unwrap()
-            .scatter(rng, ray, rec, attenuation, scattered)
-        {
-            *acc = *acc * *attenuation;
-            swap(ray, scattered);
-            *depth = depth.checked_sub(1).unwrap_or(0);
-            if *depth == 0 {
+    loop {
+        if hittable_list.hit(ray, f64::MIN_POSITIVE, f64::MAX, rec) {
+            *emitted = rec.material.as_ref().unwrap().emitted(rec.u, rec.v, rec.p);
+            if rec
+                .material
+                .as_ref()
+                .unwrap()
+                .scatter(rng, ray, rec, attenuation, scattered)
+            {
+                *acc = *acc * *attenuation + *emitted;
+                swap(ray, scattered);
+                *depth = depth.checked_sub(1).unwrap_or(0);
+                if *depth == 0 {
+                    break;
+                }
+            } else {
+                *acc = *acc * *emitted;
                 break;
             }
+        } else {
+            *acc = *acc * *background;
+            break;
         }
     }
 }
-const SAMPLES_PER_PIXEL: u32 = 400;
+const SAMPLES_PER_PIXEL: u32 = 10000;
 fn main() -> Result<(), Box<dyn Error>> {
     // World
-    let choice = 3;
+    let choice = 7;
     let rng = rand::thread_rng();
     let mut random = random::Random::new(rng, Uniform::new(0.0, 1.0));
     let world = match choice {
@@ -74,7 +85,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         1 => Arc::new(HittableList::two_spheres(&mut random)),
         2 => Arc::new(HittableList::two_perlin_spheres(&mut random)),
         3 => Arc::new(HittableList::earth()),
-        4 => Arc::new(HittableList::simple_light()),
+        4 => Arc::new(HittableList::simple_light(&mut random)),
         5 => Arc::new(HittableList::cornell_box()),
         6 => Arc::new(HittableList::cornell_smoke()),
         7 => Arc::new(HittableList::final_scene(&mut random)),
@@ -82,10 +93,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     // Camera
-    let camera: Camera = Camera::default();
+    let camera: Camera = Camera::new(
+        Vec3::new(478., 278., -600.),
+        Vec3::new(278., 278., 0.),
+        Vec3::new(0., 1., 0.),
+        40.0,
+        1.,
+        0.1,
+        0.,
+        1.,
+    );
 
     // Image
-    let image_width: u32 = 1920;
+    let image_width: u32 = 1080;
     let image_height: u32 = (image_width as f64 / camera.aspect_ratio) as u32;
     let mut imgbuf = image::RgbImage::new(image_width, image_height);
 
@@ -124,7 +144,25 @@ fn main() -> Result<(), Box<dyn Error>> {
             if progress2 > progress {
                 let time2 = Instant::now();
                 let eta = time2.duration_since(time1) * (100 - progress2);
-                println!("{0}% - ETA: {1} sec.", progress2, eta.as_secs());
+                if eta.as_secs() > 3600 {
+                    println!(
+                        "{0}% - ETA: {1} h. {2} min. {3} sec.",
+                        progress2,
+                        eta.as_secs() / 3600,
+                        (eta.as_secs() % 3600) / 60,
+                        eta.as_secs() % 60
+                    );
+                } else if eta.as_secs() > 60 {
+                    println!(
+                        "{0}% - ETA: {1} min. {2} sec.",
+                        progress2,
+                        eta.as_secs() / 60,
+                        eta.as_secs() % 60
+                    );
+                } else {
+                    println!("{0}% - ETA: {1} sec.", progress2, eta.as_secs() % 60);
+                }
+
                 progress = progress2;
                 time1 = Instant::now();
             }
@@ -162,6 +200,8 @@ fn work(
         let mut rec = HitRecord::default();
         let mut attenuation = Vec3::default();
         let mut scattered = Ray::default();
+        let mut background = Vec3::new(0., 0., 0.);
+        let mut emitted = Vec3::default();
         // `acc` must be (1,1,1) for multiplication to work;
         let mut acc = Vec3::new(1., 1., 1.);
         ray_color_iterative(
@@ -170,6 +210,8 @@ fn work(
             &mut rec,
             &mut attenuation,
             &mut scattered,
+            &mut background,
+            &mut emitted,
             &mut acc,
             &mut rng,
             &mut max_depth,

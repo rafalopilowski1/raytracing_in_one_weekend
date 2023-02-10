@@ -6,6 +6,7 @@ use crate::{
     aabb::Aabb,
     hittable::{HitRecord, HittableThreadSafe},
     objects::Hittable,
+    random::Random,
     ray::Ray,
 };
 #[derive(Default)]
@@ -38,15 +39,16 @@ impl Hittable for BvhNode {
 }
 
 impl BvhNode {
-    fn new(
+    pub fn new(
+        rng: &mut Random<usize>,
         src_objects: &mut [HittableThreadSafe],
-        start: usize,
-        end: usize,
         time0: f64,
         time1: f64,
     ) -> Self {
         let mut output: BvhNode = Default::default();
-        let axis = rand::thread_rng().gen_range(0..=2);
+        let start = 0;
+        let end = src_objects.len();
+        let axis = rng.random(Some(0), Some(3));
         let comparator = match axis {
             0 => Self::box_x_compare,
             1 => Self::box_y_compare,
@@ -66,16 +68,20 @@ impl BvhNode {
                 output.right = Some(src_objects[start].clone());
             }
         } else {
-            src_objects[start..end].sort_by(comparator);
+            src_objects.sort_by(comparator);
             let mid = start + object_span / 2;
             output.left = Some(Arc::new(BvhNode::new(
-                src_objects,
-                start,
-                mid,
+                rng,
+                &mut src_objects[start..mid],
                 time0,
                 time1,
             )));
-            output.right = Some(Arc::new(BvhNode::new(src_objects, mid, end, time0, time1)));
+            output.right = Some(Arc::new(BvhNode::new(
+                rng,
+                &mut src_objects[mid..end],
+                time0,
+                time1,
+            )));
         }
         let mut box_left = Aabb::default();
         let mut box_right = Aabb::default();
@@ -90,33 +96,26 @@ impl BvhNode {
         output.bbox = Aabb::surrounding_box(box_left, box_right);
         output
     }
-    fn box_compare(a: &HittableThreadSafe, b: &HittableThreadSafe, axis: usize) -> bool {
+    fn box_compare(
+        a: &HittableThreadSafe,
+        b: &HittableThreadSafe,
+        axis: usize,
+    ) -> std::cmp::Ordering {
         let mut box_a = Aabb::default();
         let mut box_b = Aabb::default();
         if !a.bounding_box(0.0, 0.0, &mut box_a) || !b.bounding_box(0.0, 0.0, &mut box_b) {
             panic!("No bounding box in BvhNode constructor.");
         }
-        box_a.min[axis] < box_b.min[axis]
+
+        box_a.min[axis].total_cmp(&box_b.min[axis])
     }
     fn box_x_compare(a: &HittableThreadSafe, b: &HittableThreadSafe) -> std::cmp::Ordering {
-        if Self::box_compare(a, b, 0) {
-            std::cmp::Ordering::Less
-        } else {
-            std::cmp::Ordering::Greater
-        }
+        Self::box_compare(a, b, 0)
     }
     fn box_y_compare(a: &HittableThreadSafe, b: &HittableThreadSafe) -> std::cmp::Ordering {
-        if Self::box_compare(a, b, 1) {
-            std::cmp::Ordering::Less
-        } else {
-            std::cmp::Ordering::Greater
-        }
+        Self::box_compare(a, b, 1)
     }
     fn box_z_compare(a: &HittableThreadSafe, b: &HittableThreadSafe) -> std::cmp::Ordering {
-        if Self::box_compare(a, b, 2) {
-            std::cmp::Ordering::Less
-        } else {
-            std::cmp::Ordering::Greater
-        }
+        Self::box_compare(a, b, 2)
     }
 }
