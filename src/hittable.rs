@@ -173,7 +173,7 @@ impl HittableList {
         world
     }
 
-    pub fn two_spheres(rng: &mut random::Random<f64>) -> HittableList {
+    pub fn two_spheres(_rng: &mut random::Random<f64>) -> HittableList {
         let mut world = HittableList::new(vec![]);
         let checker = Arc::new(CheckerTexture::new(
             Arc::new(SolidColor::new(Vec3::new(0.2, 0.3, 0.1))),
@@ -231,7 +231,7 @@ impl HittableList {
         todo!()
     }
 
-    pub(crate) fn final_scene(random: &mut random::Random<f64>) -> HittableList {
+    pub(crate) fn final_scene(_random: &mut random::Random<f64>) -> HittableList {
         todo!()
     }
 }

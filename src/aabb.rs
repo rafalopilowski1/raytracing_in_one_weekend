@@ -24,7 +24,7 @@ impl Aabb {
     }
 }
 impl Hittable for Aabb {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, _rec: &mut HitRecord) -> bool {
         let mut t_min = t_min;
         let mut t_max = t_max;
         for a in 0..3 {
@@ -43,7 +43,7 @@ impl Hittable for Aabb {
         true
     }
 
-    fn bounding_box(&self, time0: f64, time1: f64, output_box: &mut Aabb) -> bool {
+    fn bounding_box(&self, _time0: f64, _time1: f64, output_box: &mut Aabb) -> bool {
         *output_box = *self;
         true
     }

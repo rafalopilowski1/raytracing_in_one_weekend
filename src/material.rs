@@ -1,6 +1,6 @@
-use std::sync::Arc;
 
-use crate::{hittable::HitRecord, random::Random, texture::Texture, vec3::Vec3, Ray};
+
+use crate::{hittable::HitRecord, random::Random, vec3::Vec3, Ray};
 pub trait Material: Send + Sync {
     fn scatter(
         &self,

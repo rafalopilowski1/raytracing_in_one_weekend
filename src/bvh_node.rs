@@ -31,7 +31,7 @@ impl Hittable for BvhNode {
         hit_left || hit_right
     }
 
-    fn bounding_box(&self, time0: f64, time1: f64, output_box: &mut Aabb) -> bool {
+    fn bounding_box(&self, _time0: f64, _time1: f64, output_box: &mut Aabb) -> bool {
         *output_box = self.bbox;
         true
     }
