@@ -78,7 +78,7 @@ impl Hittable for BoxRender {
     fn hit(&self, ray: &crate::ray::Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
         self.sides.hit(ray, t_min, t_max, rec)
     }
-    fn bounding_box(&self, time0: f64, time1: f64, output_box: &mut Aabb) -> bool {
+    fn bounding_box(&self, _time0: f64, _time1: f64, output_box: &mut Aabb) -> bool {
         *output_box = Aabb::new(self.pmin, self.pmax);
         true
     }

@@ -17,11 +17,11 @@ impl DiffuseLight {
 impl Material for DiffuseLight {
     fn scatter(
         &self,
-        rng: &mut Random<f64>,
-        ray_in: &Ray,
-        rec: &HitRecord,
-        attenuation: &mut Vec3,
-        scattered: &mut Ray,
+        _rng: &mut Random<f64>,
+        _ray_in: &Ray,
+        _rec: &HitRecord,
+        _attenuation: &mut Vec3,
+        _scattered: &mut Ray,
     ) -> bool {
         false
     }

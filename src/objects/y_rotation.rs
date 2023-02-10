@@ -77,7 +77,7 @@ impl Hittable for YRotation {
             false
         }
     }
-    fn bounding_box(&self, time0: f64, time1: f64, output_box: &mut Aabb) -> bool {
+    fn bounding_box(&self, _time0: f64, _time1: f64, output_box: &mut Aabb) -> bool {
         *output_box = self.bbox;
         self.has_box
     }

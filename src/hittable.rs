@@ -420,7 +420,7 @@ impl HittableList {
     }
 
     pub(crate) fn final_scene(random: &mut random::Random<f64>) -> HittableList {
-        let mut rng = Random::new(rand::thread_rng(), Uniform::new(0usize, 3));
+        let _rng = Random::new(rand::thread_rng(), Uniform::new(0usize, 3));
         let mut boxes1 = HittableList::new(vec![]);
         let ground = Arc::new(Lamberian::new(Arc::new(SolidColor::new(Vec3::new(
             0.48, 0.83, 0.53,
@@ -528,7 +528,7 @@ impl HittableList {
             0.73, 0.73, 0.73,
         )))));
         const NS: usize = 1000;
-        for j in 0..NS {
+        for _j in 0..NS {
             boxes2.objects.push(Arc::new(Sphere::new(
                 Vec3::new(
                     165. * random.random(Some(0.), Some(1.)),

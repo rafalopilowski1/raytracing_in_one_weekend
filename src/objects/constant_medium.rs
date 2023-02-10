@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     hittable::HitRecord,
     material::Material,
-    vec3::{self, Vec3},
+    vec3::Vec3,
 };
 
 use super::Hittable;
