@@ -2,14 +2,16 @@ use std::{path::Path, sync::Arc};
 
 use crate::{
     aabb::Aabb,
-    objects::{Hittable, MovingSphere},
+    objects::{moving_sphere::MovingSphere, sphere::Sphere, Hittable},
     random::{self, Random},
-    texture::{CheckerTexture, ImageTexture, NoiseTexture, SolidColor},
+    texture::{
+        checker_texture::CheckerTexture, image_texture::ImageTexture, noise_texture::NoiseTexture,
+        solid_color::SolidColor,
+    },
 };
 
 use crate::{
-    material::{Dielectric, Lamberian, Material, Metal},
-    objects::Sphere,
+    material::{dielectric::Dielectric, lamberian::Lamberian, metal::Metal, Material},
     ray::Ray,
     vec3::Vec3,
 };
@@ -208,7 +210,9 @@ impl HittableList {
 
     pub(crate) fn earth() -> HittableList {
         let mut world = HittableList::new(vec![]);
-        let earth_texture = Arc::new(ImageTexture::new(Path::new("/home/rafal_opilowski/Code/raytracing_in_one_weekend/earthmap.jpg")));
+        let earth_texture = Arc::new(ImageTexture::new(Path::new(
+            "/home/rafal_opilowski/Code/raytracing_in_one_weekend/earthmap.jpg",
+        )));
         let earth_surface = Arc::new(Lamberian::new(earth_texture));
         let globe = Arc::new(Sphere::new(Vec3::new(0., 0., 0.), 2., earth_surface));
         world.objects.push(globe);

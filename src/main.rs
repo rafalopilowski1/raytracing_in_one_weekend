@@ -23,9 +23,8 @@ use ray::Ray;
 use std::{
     error::Error, f64::consts::PI, fs::File, io::BufWriter, mem::swap, sync::Arc, time::Instant,
 };
+use vec3::PixelResult;
 use vec3::Vec3;
-
-use crate::vec3::PixelResult;
 
 use mimalloc::MiMalloc;
 
