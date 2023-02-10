@@ -15,14 +15,7 @@ use rand::{distributions::Uniform, rngs::ThreadRng, Rng};
 use ray::Ray;
 
 use std::{
-    error::Error,
-    f64::consts::PI,
-    fs::File,
-    io::BufWriter,
-    mem::swap,
-    sync::Arc,
-    thread,
-    time::{Duration, Instant},
+    error::Error, f64::consts::PI, fs::File, io::BufWriter, mem::swap, sync::Arc, time::Instant,
 };
 use vec3::Vec3;
 
