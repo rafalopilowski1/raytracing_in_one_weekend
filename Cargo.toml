@@ -1,20 +1,20 @@
 [package]
 name = "raytracing_in_one_week"
-author="Rafał Opiłowski <rafalopilowski1@outlook.com>"
-version = "4.0.0"
-edition = "2018"
+author = "Rafał Opiłowski <rafalopilowski1@outlook.com>"
+version = "4.1.0"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rand="0.8.5"
-image = "0.24.1"
-rayon="1.5.1"
-num_cpus="1.13.1"
-mimalloc="0.1.28"
+rand = "0.8.5"
+image = "0.24.4"
+rayon = "1.5.3"
+num_cpus = "1.13.1"
+mimalloc = "0.1.30"
 
 
 [profile.release]
-lto=true
-debug=true
-codegen-units=1
+lto = true
+debug = true
+codegen-units = 1

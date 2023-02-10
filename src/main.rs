@@ -11,7 +11,7 @@ use camera::Camera;
 use hittable::{HitRecord, HittableList};
 
 use image::ImageEncoder;
-use rand::{Rng, RngCore};
+use rand::{distributions::Uniform, rngs::ThreadRng, Rng};
 use ray::Ray;
 
 use std::{
@@ -33,10 +33,20 @@ use mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-fn random_float(rng: &mut dyn RngCore, min: Option<f64>, max: Option<f64>) -> f64 {
-    match (min.is_some(), max.is_some()) {
-        (true, true) => rng.gen_range(min.unwrap()..max.unwrap()),
-        _ => rng.gen_range(0.0..1.0),
+pub struct Random {
+    pub rng: ThreadRng,
+    pub uniform: Uniform<f64>,
+}
+
+impl Random {
+    pub fn new(rng: ThreadRng, uniform: Uniform<f64>) -> Self {
+        Self { rng, uniform }
+    }
+    fn random_float(&mut self, min: Option<f64>, max: Option<f64>) -> f64 {
+        match (min.is_some(), max.is_some()) {
+            (true, true) => self.rng.gen_range(min.unwrap()..max.unwrap()),
+            _ => self.rng.sample(self.uniform),
+        }
     }
 }
 
@@ -53,38 +63,30 @@ fn ray_color_iterative(
     attenuation: &mut Vec3,
     scattered: &mut Ray,
     acc: &mut Vec3,
-    rng: &mut dyn RngCore,
+    rng: &mut Random,
     depth: &mut i8,
 ) {
-    loop {
-        if HittableList::hit_anything(objects, ray, f64::MIN_POSITIVE, f64::MAX, rec) {
-            if rec
-                .material
-                .unwrap()
-                .scatter(rng, ray, rec, attenuation, scattered)
-            {
-                *acc = *acc * *attenuation;
-                swap(ray, scattered);
-                *depth = depth.checked_sub(1).unwrap_or(0);
-                if *depth == 0 {
-                    break;
-                }
-                continue;
+    while HittableList::hit_anything(objects, ray, f64::MIN_POSITIVE, f64::MAX, rec) {
+        if rec
+            .material
+            .unwrap()
+            .scatter(rng, ray, rec, attenuation, scattered)
+        {
+            *acc = *acc * *attenuation;
+            swap(ray, scattered);
+            *depth = depth.checked_sub(1).unwrap_or(0);
+            if *depth == 0 {
+                break;
             }
-            break;
         }
-        let unit_direction: Vec3 = Vec3::unit_vector(ray.direction);
-        let t = 0.5 * (1.0 + unit_direction.y_g);
-        *acc = *acc * (Vec3::new(1., 1., 1.) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t);
-        break;
     }
 }
-const SAMPLES_PER_PIXEL: u32 = 100;
+const SAMPLES_PER_PIXEL: u32 = 400;
 fn main() -> Result<(), Box<dyn Error>> {
     // World
-    let mut rng = rand::thread_rng();
-    let world = Arc::new(HittableList::randon_scene(&mut rng));
-    drop(rng);
+    let rng = rand::thread_rng();
+    let mut random = Random::new(rng, Uniform::new(0.0, 1.0));
+    let world = Arc::new(HittableList::randon_scene(&mut random));
 
     // Camera
     let camera: Camera = Camera::default();
@@ -99,7 +101,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut progress: u32 = 0;
     let pool = rayon::ThreadPoolBuilder::new()
-        .num_threads(num_cpus::get() - 1)
         .thread_name(|idx| format!("Thread {}", idx))
         .build()?;
     let (tx, rx) = std::sync::mpsc::channel::<Option<PixelResult>>();
@@ -164,13 +165,13 @@ fn work(
     camera: Camera,
     world: &HittableList,
 ) -> Vec3 {
-    let mut rng = rand::thread_rng();
+    let mut rng = Random::new(rand::thread_rng(), Uniform::new(0.0, 1.0));
     let mut pixel_color = Vec3::new(0.0, 0.0, 0.0);
     let mut max_depth: i8 = 50;
     let objects = world.objects.as_slice();
     for _ in 0..SAMPLES_PER_PIXEL {
-        let u = (width as f64 + random_float(&mut rng, None, None)) / (image_width as f64 - 1.);
-        let v = (height as f64 + random_float(&mut rng, None, None)) / (image_height as f64 - 1.);
+        let u = (width as f64 + rng.random_float(None, None)) / (image_width as f64 - 1.);
+        let v = (height as f64 + rng.random_float(None, None)) / (image_height as f64 - 1.);
         let mut ray = Camera::get_ray(&mut rng, camera, u, v);
         let mut rec = HitRecord::default();
         let mut attenuation = Vec3::default();

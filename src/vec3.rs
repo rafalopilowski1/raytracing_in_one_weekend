@@ -4,9 +4,8 @@ use std::{
 };
 
 use image::{Pixel, Rgb};
-use rand::RngCore;
 
-use crate::random_float;
+use crate::Random;
 
 #[derive(PartialEq, PartialOrd, Clone, Copy, Default, Debug)]
 pub struct Vec3 {
@@ -56,10 +55,10 @@ impl Vec3 {
         v / Vec3::length(v)
     }
 
-    pub fn random(rng: &mut dyn RngCore, min: Option<f64>, max: Option<f64>) -> Vec3 {
-        let rng_x = random_float(rng, min, max);
-        let rng_y = random_float(rng, min, max);
-        let rng_z = random_float(rng, min, max);
+    pub fn random(rng: &mut Random, min: Option<f64>, max: Option<f64>) -> Vec3 {
+        let rng_x = rng.random_float(min, max);
+        let rng_y = rng.random_float(min, max);
+        let rng_z = rng.random_float(min, max);
         Self {
             x_r: rng_x,
             y_g: rng_y,
@@ -67,22 +66,19 @@ impl Vec3 {
         }
     }
 
-    pub fn random_in_unit_sphere(rng: &mut dyn RngCore) -> Self {
-        loop {
-            let p: Vec3 = Vec3::random(rng, Some(-1.0), Some(1.0));
-            if Vec3::length_squared(p) >= 1. {
-                continue;
-            } else {
-                return p;
-            }
+    pub fn random_in_unit_sphere(rng: &mut Random) -> Self {
+        let mut p: Vec3 = Vec3::random(rng, Some(-1.0), Some(1.0));
+        while Vec3::length_squared(p) >= 1. {
+            p = Vec3::random(rng, Some(-1.0), Some(1.0));
         }
+        p
     }
 
-    pub fn random_unit_vector(rng: &mut dyn RngCore) -> Vec3 {
+    pub fn random_unit_vector(rng: &mut Random) -> Vec3 {
         Vec3::unit_vector(Vec3::random_in_unit_sphere(rng))
     }
 
-    pub fn random_in_hemisphere(rng: &mut dyn RngCore, normal: Vec3) -> Vec3 {
+    pub fn random_in_hemisphere(rng: &mut Random, normal: Vec3) -> Vec3 {
         let in_unit_sphere: Vec3 = Vec3::random_in_unit_sphere(rng);
         if Vec3::dot(in_unit_sphere, normal) > 0.0 {
             in_unit_sphere
@@ -91,19 +87,20 @@ impl Vec3 {
         }
     }
 
-    pub fn random_in_unit_disk(rng: &mut dyn RngCore) -> Vec3 {
-        loop {
-            let p = Vec3::new(
-                crate::random_float(rng, None, None),
-                crate::random_float(rng, None, None),
+    pub fn random_in_unit_disk(rng: &mut Random) -> Vec3 {
+        let mut p = Vec3::new(
+            rng.random_float(None, None),
+            rng.random_float(None, None),
+            0.,
+        );
+        while Vec3::length_squared(p) >= 1. {
+            p = Vec3::new(
+                rng.random_float(None, None),
+                rng.random_float(None, None),
                 0.,
             );
-            if Vec3::length_squared(p) >= 1. {
-                continue;
-            } else {
-                return p;
-            }
         }
+        p
     }
 
     pub fn near_zero(vec: Self) -> bool {

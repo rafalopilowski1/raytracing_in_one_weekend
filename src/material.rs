@@ -1,6 +1,4 @@
-use rand::RngCore;
-
-use crate::{hittable::HitRecord, vec3::Vec3, Ray};
+use crate::{hittable::HitRecord, vec3::Vec3, Random, Ray};
 #[derive(Clone, Copy)]
 pub enum Material {
     Lamberian(Lamberian),
@@ -10,7 +8,7 @@ pub enum Material {
 impl Material {
     pub fn scatter(
         &self,
-        rng: &mut dyn RngCore,
+        rng: &mut Random,
         ray_in: &Ray,
         rec: &HitRecord,
         attenuation: &mut Vec3,
@@ -38,7 +36,7 @@ impl Lamberian {
     }
     fn scatter(
         &self,
-        rng: &mut dyn RngCore,
+        rng: &mut Random,
         ray_in: &Ray,
         rec: &HitRecord,
         attenuation: &mut Vec3,
@@ -67,7 +65,7 @@ impl Metal {
     }
     fn scatter(
         &self,
-        rng: &mut dyn RngCore,
+        rng: &mut Random,
         ray_in: &Ray,
         rec: &HitRecord,
         attenuation: &mut Vec3,
@@ -100,7 +98,7 @@ impl Dielectric {
     }
     fn scatter(
         &self,
-        rng: &mut dyn RngCore,
+        rng: &mut Random,
         ray_in: &Ray,
         rec: &HitRecord,
         attenuation: &mut Vec3,
@@ -117,12 +115,9 @@ impl Dielectric {
         let cos_theta = f64::min(Vec3::dot(-unit_direction, rec.normal), 1.0);
         let sin_theta = f64::sqrt(1.0 - cos_theta * cos_theta);
 
-        
         let cannot_refract = refraction_ratio * sin_theta > 1.0;
-let direction: Vec3 =
-        if cannot_refract
-            || Dielectric::reflactance(cos_theta, refraction_ratio)
-                > crate::random_float(rng, None, None)
+        let direction: Vec3 = if cannot_refract
+            || Dielectric::reflactance(cos_theta, refraction_ratio) > rng.random_float(None, None)
         {
             Vec3::reflect(unit_direction, rec.normal)
         } else {

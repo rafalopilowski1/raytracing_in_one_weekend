@@ -1,8 +1,7 @@
 use crate::{
     objects::{MovingSphere, Object},
-    random_float,
+    Random,
 };
-use rand::RngCore;
 
 use crate::{
     material::{Dielectric, Lamberian, Material, Metal},
@@ -59,16 +58,16 @@ impl HittableList {
         let mut hit_anything = false;
         let mut closest_so_far = t_max;
 
-        for object in objects {
+        objects.iter().for_each(|object| {
             if object.hit(ray, t_min, closest_so_far, rec) {
-                hit_anything = true;
                 closest_so_far = rec.t;
+                hit_anything = true;
             }
-        }
+        });
 
         hit_anything
     }
-    pub fn randon_scene(rng: &mut dyn RngCore) -> HittableList {
+    pub fn randon_scene(rng: &mut Random) -> HittableList {
         let mut world = HittableList::new(vec![]);
 
         let ground_material = Material::Lamberian(Lamberian::new(Vec3::new(0.5, 0.5, 0.5)));
@@ -79,21 +78,21 @@ impl HittableList {
         )));
         for a in -11..11 {
             for b in -11..11 {
-                let choose_mat = crate::random_float(rng, None, None);
+                let choose_mat = rng.random_float(None, None);
                 let center = Vec3::new(
-                    a as f64 + 0.9 * crate::random_float(rng, None, None),
+                    a as f64 + 0.9 * rng.random_float(None, None),
                     0.2,
-                    b as f64 + crate::random_float(rng, None, None),
+                    b as f64 + rng.random_float(None, None),
                 );
 
                 if Vec3::length(center - Vec3::new(4., 0.2, 0.)) > 0.9 {
-                    let mut sphere_material: Option<Material> = None;
+                    let sphere_material: Option<Material>;
                     if choose_mat < 0.8 {
                         // diffuse
                         let albedo = Vec3::random(rng, None, None) * Vec3::random(rng, None, None);
                         sphere_material = Some(Material::Lamberian(Lamberian::new(albedo)));
                         let center2 =
-                            center + Vec3::new(0., random_float(rng, Some(0.), Some(0.5)), 0.);
+                            center + Vec3::new(0., rng.random_float(Some(0.), Some(0.5)), 0.);
                         world.objects.push(Object::MovingSphere(MovingSphere::new(
                             center,
                             center2,
@@ -106,7 +105,7 @@ impl HittableList {
                     } else if choose_mat < 0.95 {
                         // metal
                         let albedo = Vec3::random(rng, Some(0.5), Some(1.));
-                        let fuzz = crate::random_float(rng, Some(0.), Some(0.5));
+                        let fuzz = rng.random_float(Some(0.), Some(0.5));
                         sphere_material = Some(Material::Metal(Metal::new(albedo, fuzz)));
                     } else {
                         // glass

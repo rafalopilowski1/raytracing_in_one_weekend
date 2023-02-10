@@ -8,11 +8,30 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug",
-      "cargo": { "args": ["build"] },
-      "program": "./target/debug/raytracing_in_one_week.exe",
+      "cargo": {
+        "args": [
+          "build"
+        ]
+      },
+      "program": "./target/debug/raytracing_in_one_week",
       "args": [],
       "cwd": "${workspaceFolder}/",
       "relativePathBase": "${workspaceFolder}/"
-    }
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Release",
+      "cargo": {
+        "args": [
+          "build",
+          "--release"
+        ]
+      },
+      "program": "./target/release/raytracing_in_one_week",
+      "args": [],
+      "cwd": "${workspaceFolder}/",
+      "relativePathBase": "${workspaceFolder}/"
+    },
   ]
 }
