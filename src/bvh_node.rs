@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::VecDeque, error::Error, sync::Arc};
 
 use rand::Rng;
 
@@ -6,7 +6,6 @@ use crate::{
     aabb::Aabb,
     hittable::{HitRecord, HittableThreadSafe},
     objects::Hittable,
-    random::Random,
     ray::Ray,
 };
 #[derive(Default)]
@@ -21,15 +20,20 @@ impl Hittable for BvhNode {
         if !self.bbox.hit(ray, t_min, t_max, rec) {
             return false;
         }
-        let mut hit_left = false;
         if let Some(left) = &self.left {
-            hit_left = left.hit(ray, t_min, t_max, rec);
+            let hit_left = left.hit(ray, t_min, t_max, rec);
+            if hit_left {
+                return true;
+            }
         }
-        let mut hit_right = false;
+
         if let Some(right) = &self.right {
-            hit_right = right.hit(ray, t_min, t_max, rec);
+            let hit_right = right.hit(ray, t_min, t_max, rec);
+            if hit_right {
+                return true;
+            }
         }
-        hit_left || hit_right
+        false
     }
 
     fn bounding_box(&self, _time0: f64, _time1: f64, output_box: &mut Aabb) -> bool {
@@ -39,21 +43,11 @@ impl Hittable for BvhNode {
 }
 
 impl BvhNode {
-    pub fn new(
-        rng: &mut Random<usize>,
-        src_objects: &mut [HittableThreadSafe],
-        time0: f64,
-        time1: f64,
-    ) -> Self {
-        let mut output: BvhNode = Default::default();
+    pub fn new(src_objects: &mut [HittableThreadSafe], time0: f64, time1: f64) -> Self {
+        let mut output = Self::default();
         let start = 0;
         let end = src_objects.len();
-        let axis = rng.random(Some(0), Some(3));
-        let comparator = match axis {
-            0 => Self::box_x_compare,
-            1 => Self::box_y_compare,
-            _ => Self::box_z_compare,
-        };
+        let comparator = Self::box_compare;
         let object_span = end - start;
         if object_span == 1 {
             output.left = Some(src_objects[start].clone());
@@ -71,13 +65,11 @@ impl BvhNode {
             src_objects.sort_by(comparator);
             let mid = start + object_span / 2;
             output.left = Some(Arc::new(BvhNode::new(
-                rng,
                 &mut src_objects[start..mid],
                 time0,
                 time1,
             )));
             output.right = Some(Arc::new(BvhNode::new(
-                rng,
                 &mut src_objects[mid..end],
                 time0,
                 time1,
@@ -85,37 +77,36 @@ impl BvhNode {
         }
         let mut box_left = Aabb::default();
         let mut box_right = Aabb::default();
-        if let (Some(left), Some(right)) = (&output.left, &output.right) {
-            if !left.bounding_box(time0, time1, &mut box_left)
-                || !right.bounding_box(time0, time1, &mut box_right)
-            {
-                panic!("No bounding box in BvhNode constructor.");
-            }
-        }
+        Self::get_surrounding_box(&output, time0, time1, &mut box_left, &mut box_right);
 
         output.bbox = Aabb::surrounding_box(box_left, box_right);
         output
     }
-    fn box_compare(
-        a: &HittableThreadSafe,
-        b: &HittableThreadSafe,
-        axis: usize,
-    ) -> std::cmp::Ordering {
+    fn box_compare(a: &HittableThreadSafe, b: &HittableThreadSafe) -> std::cmp::Ordering {
         let mut box_a = Aabb::default();
         let mut box_b = Aabb::default();
         if !a.bounding_box(0.0, 0.0, &mut box_a) || !b.bounding_box(0.0, 0.0, &mut box_b) {
             panic!("No bounding box in BvhNode constructor.");
         }
 
-        box_a.min[axis].total_cmp(&box_b.min[axis])
+        box_a.min[0]
+            .total_cmp(&box_b.min[0])
+            .then(box_a.min[1].total_cmp(&box_b.min[1]))
+            .then(box_a.min[2].total_cmp(&box_b.min[2]))
     }
-    fn box_x_compare(a: &HittableThreadSafe, b: &HittableThreadSafe) -> std::cmp::Ordering {
-        Self::box_compare(a, b, 0)
-    }
-    fn box_y_compare(a: &HittableThreadSafe, b: &HittableThreadSafe) -> std::cmp::Ordering {
-        Self::box_compare(a, b, 1)
-    }
-    fn box_z_compare(a: &HittableThreadSafe, b: &HittableThreadSafe) -> std::cmp::Ordering {
-        Self::box_compare(a, b, 2)
+    fn get_surrounding_box(
+        output: &BvhNode,
+        time0: f64,
+        time1: f64,
+        box_left: &mut Aabb,
+        box_right: &mut Aabb,
+    ) {
+        if let (Some(left), Some(right)) = (&output.left, &output.right) {
+            if !left.bounding_box(time0, time1, box_left)
+                || !right.bounding_box(time0, time1, box_right)
+            {
+                panic!("No bounding box in BvhNode constructor.");
+            }
+        }
     }
 }

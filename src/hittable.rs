@@ -446,12 +446,9 @@ impl HittableList {
         }
 
         let mut world = HittableList::new(vec![]);
-        world.objects.push(Arc::new(BvhNode::new(
-            &mut rng,
-            &mut boxes1.objects,
-            0.,
-            1.,
-        )));
+        world
+            .objects
+            .push(Arc::new(BvhNode::new(&mut boxes1.objects, 0., 1.)));
 
         let light = Arc::new(DiffuseLight::new(Arc::new(SolidColor::new(Vec3::new(
             7., 7., 7.,
@@ -545,7 +542,7 @@ impl HittableList {
 
         world.objects.push(Arc::new(Translate::new(
             Arc::new(YRotation::new(
-                Arc::new(BvhNode::new(&mut rng, &mut boxes2.objects, 0., 1.)),
+                Arc::new(BvhNode::new(&mut boxes2.objects, 0., 1.)),
                 15.,
             )),
             Vec3::new(-100., 270., 395.),
