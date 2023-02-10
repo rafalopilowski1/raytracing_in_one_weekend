@@ -1,4 +1,4 @@
-use crate::{degrees_to_radians, ray::Ray, vec3::Vec3, Random};
+use crate::{degrees_to_radians, random::Random, ray::Ray, vec3::Vec3};
 #[derive(Clone, Copy)]
 pub struct Camera {
     pub lens_radius: f64,
@@ -58,7 +58,7 @@ impl Camera {
         }
     }
 
-    pub fn get_ray(rng: &mut Random, camera: Camera, s: f64, t: f64) -> Ray {
+    pub fn get_ray(rng: &mut Random<f64>, camera: Camera, s: f64, t: f64) -> Ray {
         let rd = Vec3::random_in_unit_disk(rng) * camera.lens_radius;
         let offset = camera.u * rd.x_r + camera.v * rd.y_g;
         Ray::new(
@@ -66,7 +66,7 @@ impl Camera {
             camera.lower_left_corner + (camera.horizontal * s) + (camera.vertical * t)
                 - camera.origin
                 - offset,
-            rng.random_float(Some(camera.time0), Some(camera.time1)),
+            rng.random(Some(camera.time0), Some(camera.time1)),
         )
     }
 }

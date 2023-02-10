@@ -1,11 +1,11 @@
 use std::{
     fmt::Display,
-    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub},
+    ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub},
 };
 
 use image::{Pixel, Rgb};
 
-use crate::Random;
+use crate::random::Random;
 
 #[derive(PartialEq, PartialOrd, Clone, Copy, Default, Debug)]
 pub struct Vec3 {
@@ -55,10 +55,10 @@ impl Vec3 {
         v / Vec3::length(v)
     }
 
-    pub fn random(rng: &mut Random, min: Option<f64>, max: Option<f64>) -> Vec3 {
-        let rng_x = rng.random_float(min, max);
-        let rng_y = rng.random_float(min, max);
-        let rng_z = rng.random_float(min, max);
+    pub fn random(rng: &mut Random<f64>, min: Option<f64>, max: Option<f64>) -> Vec3 {
+        let rng_x = rng.random(min, max);
+        let rng_y = rng.random(min, max);
+        let rng_z = rng.random(min, max);
         Self {
             x_r: rng_x,
             y_g: rng_y,
@@ -66,7 +66,7 @@ impl Vec3 {
         }
     }
 
-    pub fn random_in_unit_sphere(rng: &mut Random) -> Self {
+    pub fn random_in_unit_sphere(rng: &mut Random<f64>) -> Self {
         let mut p: Vec3 = Vec3::random(rng, Some(-1.0), Some(1.0));
         while Vec3::length_squared(p) >= 1. {
             p = Vec3::random(rng, Some(-1.0), Some(1.0));
@@ -74,11 +74,11 @@ impl Vec3 {
         p
     }
 
-    pub fn random_unit_vector(rng: &mut Random) -> Vec3 {
+    pub fn random_unit_vector(rng: &mut Random<f64>) -> Vec3 {
         Vec3::unit_vector(Vec3::random_in_unit_sphere(rng))
     }
 
-    pub fn random_in_hemisphere(rng: &mut Random, normal: Vec3) -> Vec3 {
+    pub fn random_in_hemisphere(rng: &mut Random<f64>, normal: Vec3) -> Vec3 {
         let in_unit_sphere: Vec3 = Vec3::random_in_unit_sphere(rng);
         if Vec3::dot(in_unit_sphere, normal) > 0.0 {
             in_unit_sphere
@@ -87,18 +87,10 @@ impl Vec3 {
         }
     }
 
-    pub fn random_in_unit_disk(rng: &mut Random) -> Vec3 {
-        let mut p = Vec3::new(
-            rng.random_float(None, None),
-            rng.random_float(None, None),
-            0.,
-        );
+    pub fn random_in_unit_disk(rng: &mut Random<f64>) -> Vec3 {
+        let mut p = Vec3::new(rng.random(None, None), rng.random(None, None), 0.);
         while Vec3::length_squared(p) >= 1. {
-            p = Vec3::new(
-                rng.random_float(None, None),
-                rng.random_float(None, None),
-                0.,
-            );
+            p = Vec3::new(rng.random(None, None), rng.random(None, None), 0.);
         }
         p
     }
@@ -256,5 +248,29 @@ impl Neg for Vec3 {
 impl Display for Vec3 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{0} {1} {2}", self.x_r, self.y_g, self.z_b))
+    }
+}
+
+impl Index<usize> for Vec3 {
+    type Output = f64;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.x_r,
+            1 => &self.y_g,
+            2 => &self.z_b,
+            _ => panic!("Index out of bounds"),
+        }
+    }
+}
+
+impl IndexMut<usize> for Vec3 {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        match index {
+            0 => &mut self.x_r,
+            1 => &mut self.y_g,
+            2 => &mut self.z_b,
+            _ => panic!("Index out of bounds"),
+        }
     }
 }

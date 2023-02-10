@@ -1,42 +1,25 @@
-use crate::{hittable::HitRecord, vec3::Vec3, Random, Ray};
-#[derive(Clone, Copy)]
-pub enum Material {
-    Lamberian(Lamberian),
-    Metal(Metal),
-    Dielectric(Dielectric),
-}
-impl Material {
-    pub fn scatter(
+use std::sync::Arc;
+
+use crate::{hittable::HitRecord, random::Random, texture::Texture, vec3::Vec3, Ray};
+pub trait Material: Send + Sync {
+    fn scatter(
         &self,
-        rng: &mut Random,
+        rng: &mut Random<f64>,
         ray_in: &Ray,
         rec: &HitRecord,
         attenuation: &mut Vec3,
         scattered: &mut Ray,
-    ) -> bool {
-        match self {
-            Material::Lamberian(lamberian) => {
-                lamberian.scatter(rng, ray_in, rec, attenuation, scattered)
-            }
-            Material::Metal(metal) => metal.scatter(rng, ray_in, rec, attenuation, scattered),
-            Material::Dielectric(dielectric) => {
-                dielectric.scatter(rng, ray_in, rec, attenuation, scattered)
-            }
-        }
-    }
+    ) -> bool;
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Lamberian {
-    albedo: Vec3,
+    albedo: Arc<dyn Texture>,
 }
-impl Lamberian {
-    pub fn new(albedo: Vec3) -> Self {
-        Self { albedo }
-    }
+impl Material for Lamberian {
     fn scatter(
         &self,
-        rng: &mut Random,
+        rng: &mut Random<f64>,
         ray_in: &Ray,
         rec: &HitRecord,
         attenuation: &mut Vec3,
@@ -47,8 +30,13 @@ impl Lamberian {
             scatter_direction = rec.normal;
         }
         *scattered = Ray::new(rec.p, scatter_direction, ray_in.time);
-        *attenuation = self.albedo;
+        *attenuation = self.albedo.color(rec.u, rec.v, rec.p);
         true
+    }
+}
+impl Lamberian {
+    pub fn new(albedo: Arc<dyn Texture>) -> Self {
+        Self { albedo }
     }
 }
 #[derive(Clone, Copy)]
@@ -56,16 +44,10 @@ pub struct Metal {
     albedo: Vec3,
     fuzz: f64,
 }
-impl Metal {
-    pub fn new(albedo: Vec3, fuzz: f64) -> Self {
-        Self {
-            albedo,
-            fuzz: if fuzz < 1. { fuzz } else { 1. },
-        }
-    }
+impl Material for Metal {
     fn scatter(
         &self,
-        rng: &mut Random,
+        rng: &mut Random<f64>,
         ray_in: &Ray,
         rec: &HitRecord,
         attenuation: &mut Vec3,
@@ -81,24 +63,23 @@ impl Metal {
         Vec3::dot(scattered.direction, rec.normal) > 0.
     }
 }
+impl Metal {
+    pub fn new(albedo: Vec3, fuzz: f64) -> Self {
+        Self {
+            albedo,
+            fuzz: if fuzz < 1. { fuzz } else { 1. },
+        }
+    }
+}
 
 #[derive(Clone, Copy)]
 pub struct Dielectric {
     ir: f64,
 }
-impl Dielectric {
-    pub fn new(ir: f64) -> Self {
-        Self { ir }
-    }
-
-    pub fn reflactance(cosine: f64, ref_idx: f64) -> f64 {
-        let mut r0 = (1. - ref_idx) / (1. + ref_idx);
-        r0 = r0 * r0;
-        r0 * (1. - r0) * f64::powf(1. - cosine, 5.0)
-    }
+impl Material for Dielectric {
     fn scatter(
         &self,
-        rng: &mut Random,
+        rng: &mut Random<f64>,
         ray_in: &Ray,
         rec: &HitRecord,
         attenuation: &mut Vec3,
@@ -117,7 +98,7 @@ impl Dielectric {
 
         let cannot_refract = refraction_ratio * sin_theta > 1.0;
         let direction: Vec3 = if cannot_refract
-            || Dielectric::reflactance(cos_theta, refraction_ratio) > rng.random_float(None, None)
+            || Dielectric::reflactance(cos_theta, refraction_ratio) > rng.random(None, None)
         {
             Vec3::reflect(unit_direction, rec.normal)
         } else {
@@ -126,5 +107,16 @@ impl Dielectric {
 
         *scattered = Ray::new(rec.p, direction, ray_in.time);
         true
+    }
+}
+impl Dielectric {
+    pub fn new(ir: f64) -> Self {
+        Self { ir }
+    }
+
+    pub fn reflactance(cosine: f64, ref_idx: f64) -> f64 {
+        let mut r0 = (1. - ref_idx) / (1. + ref_idx);
+        r0 = r0 * r0;
+        r0 * (1. - r0) * f64::powf(1. - cosine, 5.0)
     }
 }

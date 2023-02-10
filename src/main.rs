@@ -1,17 +1,23 @@
+mod aabb;
+mod bvh_node;
 mod camera;
 mod hittable;
 mod material;
 mod objects;
+mod perlin;
+mod random;
 mod ray;
+mod texture;
 mod vec3;
 
-use crate::objects::Object;
 use camera::Camera;
 
 use hittable::{HitRecord, HittableList};
 
 use image::ImageEncoder;
-use rand::{distributions::Uniform, rngs::ThreadRng, Rng};
+use objects::Hittable;
+use rand::distributions::Uniform;
+use random::Random;
 use ray::Ray;
 
 use std::{
@@ -26,23 +32,6 @@ use mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-pub struct Random {
-    pub rng: ThreadRng,
-    pub uniform: Uniform<f64>,
-}
-
-impl Random {
-    pub fn new(rng: ThreadRng, uniform: Uniform<f64>) -> Self {
-        Self { rng, uniform }
-    }
-    fn random_float(&mut self, min: Option<f64>, max: Option<f64>) -> f64 {
-        match (min.is_some(), max.is_some()) {
-            (true, true) => self.rng.gen_range(min.unwrap()..max.unwrap()),
-            _ => self.rng.sample(self.uniform),
-        }
-    }
-}
-
 fn degrees_to_radians(degrees: f64) -> f64 {
     degrees * (PI) / 180.0
 }
@@ -51,17 +40,18 @@ fn degrees_to_radians(degrees: f64) -> f64 {
 
 fn ray_color_iterative(
     ray: &mut Ray,
-    objects: &[Object],
+    hittable_list: &HittableList,
     rec: &mut HitRecord,
     attenuation: &mut Vec3,
     scattered: &mut Ray,
     acc: &mut Vec3,
-    rng: &mut Random,
+    rng: &mut Random<f64>,
     depth: &mut i8,
 ) {
-    while HittableList::hit_anything(objects, ray, f64::MIN_POSITIVE, f64::MAX, rec) {
+    while hittable_list.hit(ray, f64::MIN_POSITIVE, f64::MAX, rec) {
         if rec
             .material
+            .as_ref()
             .unwrap()
             .scatter(rng, ray, rec, attenuation, scattered)
         {
@@ -77,15 +67,26 @@ fn ray_color_iterative(
 const SAMPLES_PER_PIXEL: u32 = 400;
 fn main() -> Result<(), Box<dyn Error>> {
     // World
+    let choice = 3;
     let rng = rand::thread_rng();
-    let mut random = Random::new(rng, Uniform::new(0.0, 1.0));
-    let world = Arc::new(HittableList::randon_scene(&mut random));
+    let mut random = random::Random::new(rng, Uniform::new(0.0, 1.0));
+    let world = match choice {
+        0 => Arc::new(HittableList::randon_scene(&mut random)),
+        1 => Arc::new(HittableList::two_spheres(&mut random)),
+        2 => Arc::new(HittableList::two_perlin_spheres(&mut random)),
+        3 => Arc::new(HittableList::earth()),
+        4 => Arc::new(HittableList::simple_light()),
+        5 => Arc::new(HittableList::cornell_box()),
+        6 => Arc::new(HittableList::cornell_smoke()),
+        7 => Arc::new(HittableList::final_scene(&mut random)),
+        _ => Arc::new(HittableList::randon_scene(&mut random)),
+    };
 
     // Camera
     let camera: Camera = Camera::default();
 
     // Image
-    let image_width: u32 = 400;
+    let image_width: u32 = 1920;
     let image_height: u32 = (image_width as f64 / camera.aspect_ratio) as u32;
     let mut imgbuf = image::RgbImage::new(image_width, image_height);
 
@@ -100,17 +101,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut time1 = Instant::now();
     for h in 0..image_height {
         for w in 0..image_width {
-            let world = world.clone();
             let tx = tx.clone();
+            let world = world.clone();
             pool.spawn(move || {
-                let pixel_color = work(
-                    image_width - w,
-                    image_width,
-                    h,
-                    image_height,
-                    camera,
-                    &world,
-                );
+                let pixel_color =
+                    work(image_width - w, image_width, h, image_height, camera, world);
                 let pixel_result = Some(PixelResult::new(
                     pixel_color,
                     image_width - w - 1, // TODO: workaround to invert image; investigate why is it needed?
@@ -156,15 +151,14 @@ fn work(
     height: u32,
     image_height: u32,
     camera: Camera,
-    world: &HittableList,
+    world: Arc<HittableList>,
 ) -> Vec3 {
-    let mut rng = Random::new(rand::thread_rng(), Uniform::new(0.0, 1.0));
+    let mut rng = random::Random::new(rand::thread_rng(), Uniform::new(0.0, 1.0));
     let mut pixel_color = Vec3::new(0.0, 0.0, 0.0);
     let mut max_depth: i8 = 50;
-    let objects = world.objects.as_slice();
     for _ in 0..SAMPLES_PER_PIXEL {
-        let u = (width as f64 + rng.random_float(None, None)) / (image_width as f64 - 1.);
-        let v = (height as f64 + rng.random_float(None, None)) / (image_height as f64 - 1.);
+        let u = (width as f64 + rng.random(None, None)) / (image_width as f64 - 1.);
+        let v = (height as f64 + rng.random(None, None)) / (image_height as f64 - 1.);
         let mut ray = Camera::get_ray(&mut rng, camera, u, v);
         let mut rec = HitRecord::default();
         let mut attenuation = Vec3::default();
@@ -173,7 +167,7 @@ fn work(
         let mut acc = Vec3::new(1., 1., 1.);
         ray_color_iterative(
             &mut ray,
-            objects,
+            &world,
             &mut rec,
             &mut attenuation,
             &mut scattered,
