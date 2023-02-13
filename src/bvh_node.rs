@@ -1,16 +1,11 @@
 use rayon::prelude::ParallelSliceMut;
 use std::sync::Arc;
 
-use crate::{
-    aabb::Aabb,
-    hittable::{HitRecord, HittableThreadSafe},
-    objects::Hittable,
-    ray::Ray,
-};
+use crate::{aabb::Aabb, hittable::HitRecord, objects::Hittable, ray::Ray};
 #[derive(Default)]
 pub struct BvhNode {
-    pub left: Option<HittableThreadSafe>,
-    pub right: Option<HittableThreadSafe>,
+    pub left: Option<Arc<dyn Hittable>>,
+    pub right: Option<Arc<dyn Hittable>>,
     pub bbox: Aabb,
 }
 
@@ -19,20 +14,15 @@ impl Hittable for BvhNode {
         if !self.bbox.hit(ray, t_min, t_max, rec) {
             return false;
         }
+        let mut hit_left = false;
         if let Some(left) = &self.left {
-            let hit_left = left.hit(ray, t_min, t_max, rec);
-            if hit_left {
-                return true;
-            }
+            hit_left = left.hit(ray, t_min, t_max, rec);
         }
-
+        let mut hit_right = false;
         if let Some(right) = &self.right {
-            let hit_right = right.hit(ray, t_min, t_max, rec);
-            if hit_right {
-                return true;
-            }
+            hit_right = right.hit(ray, t_min, t_max, rec);
         }
-        false
+        hit_left || hit_right
     }
 
     fn bounding_box(&self, _time0: f64, _time1: f64, output_box: &mut Aabb) -> bool {
@@ -42,7 +32,7 @@ impl Hittable for BvhNode {
 }
 
 impl BvhNode {
-    pub fn new(src_objects: &mut [HittableThreadSafe], time0: f64, time1: f64) -> Self {
+    pub fn new(src_objects: &mut [Arc<dyn Hittable>], time0: f64, time1: f64) -> Self {
         let mut output = Self::default();
         let start = 0;
         let end = src_objects.len();
@@ -81,7 +71,7 @@ impl BvhNode {
         output.bbox = Aabb::surrounding_box(box_left, box_right);
         output
     }
-    fn box_compare(a: &HittableThreadSafe, b: &HittableThreadSafe) -> std::cmp::Ordering {
+    fn box_compare(a: &Arc<dyn Hittable>, b: &Arc<dyn Hittable>) -> std::cmp::Ordering {
         let mut box_a = Aabb::default();
         let mut box_b = Aabb::default();
         if !a.bounding_box(0.0, 0.0, &mut box_a) || !b.bounding_box(0.0, 0.0, &mut box_b) {

@@ -14,27 +14,15 @@ pub struct Vec3 {
     pub z_b: f64,
 }
 
-pub struct PixelResult {
-    pub color: Vec3,
-    pub x: u32,
-    pub y: u32,
-}
-
-impl PixelResult {
-    pub fn new(color: Vec3, x: u32, y: u32) -> Self {
-        Self { color, x, y }
-    }
-}
-
 impl Vec3 {
     pub fn new(x_r: f64, y_g: f64, z_b: f64) -> Self {
         Self { x_r, y_g, z_b }
     }
-
+    #[inline(always)]
     pub fn length(v: Self) -> f64 {
         f64::sqrt(Vec3::length_squared(v))
     }
-
+    #[inline(always)]
     pub fn length_squared(v: Vec3) -> f64 {
         v.x_r * v.x_r + v.y_g * v.y_g + v.z_b * v.z_b
     }
@@ -46,11 +34,11 @@ impl Vec3 {
             z_b: v.x_r * rhs.y_g - v.y_g * rhs.x_r,
         }
     }
-
+    #[inline(always)]
     pub fn dot(v: Self, rhs: Self) -> f64 {
         v.x_r * rhs.x_r + v.y_g * rhs.y_g + v.z_b * rhs.z_b
     }
-
+    #[inline(always)]
     pub fn unit_vector(v: Vec3) -> Self {
         v / Vec3::length(v)
     }
@@ -67,11 +55,12 @@ impl Vec3 {
     }
 
     pub fn random_in_unit_sphere(rng: &mut Random<f64>) -> Self {
-        let mut p: Vec3 = Vec3::random(rng, Some(-1.0), Some(1.0));
-        while Vec3::length_squared(p) >= 1. {
-            p = Vec3::random(rng, Some(-1.0), Some(1.0));
+        loop {
+            let p: Vec3 = Vec3::random(rng, Some(-1.0), Some(1.0));
+            if Vec3::length_squared(p) < 1. {
+                return p;
+            }
         }
-        p
     }
 
     pub fn random_unit_vector(rng: &mut Random<f64>) -> Vec3 {
@@ -88,18 +77,24 @@ impl Vec3 {
     }
 
     pub fn random_in_unit_disk(rng: &mut Random<f64>) -> Vec3 {
-        let mut p = Vec3::new(rng.random(None, None), rng.random(None, None), 0.);
-        while Vec3::length_squared(p) >= 1. {
-            p = Vec3::new(rng.random(None, None), rng.random(None, None), 0.);
+        loop {
+            let p = Vec3::new(
+                rng.random(Some(-1.0), Some(1.0)),
+                rng.random(Some(-1.0), Some(1.0)),
+                0.,
+            );
+            if Vec3::length_squared(p) < 1. {
+                return p;
+            }
         }
-        p
     }
-
+    #[inline(always)]
     pub fn near_zero(vec: Self) -> bool {
-        let s = f64::MIN_POSITIVE;
-        f64::abs(vec.x_r) < s && f64::abs(vec.y_g) < s && f64::abs(vec.z_b) < s
+        f64::abs(vec.x_r) < f64::MIN_POSITIVE
+            && f64::abs(vec.y_g) < f64::MIN_POSITIVE
+            && f64::abs(vec.z_b) < f64::MIN_POSITIVE
     }
-
+    #[inline(always)]
     pub fn reflect(v: Self, n: Self) -> Vec3 {
         v - n * Vec3::dot(v, n) * 2.
     }

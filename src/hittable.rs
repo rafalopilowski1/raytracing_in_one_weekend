@@ -1,7 +1,5 @@
 use std::{path::Path, sync::Arc};
 
-use rand::distributions::Uniform;
-
 use crate::{
     aabb::Aabb,
     bvh_node::BvhNode,
@@ -11,7 +9,7 @@ use crate::{
         sphere::Sphere, translate::Translate, xy_rect::xy_rect, xz_rect::xz_rect,
         y_rotation::YRotation, yz_rect::yz_rect, Hittable,
     },
-    random::{self, Random},
+    random::Random,
     texture::{
         checker_texture::CheckerTexture, image_texture::ImageTexture, noise_texture::NoiseTexture,
         solid_color::SolidColor,
@@ -58,10 +56,8 @@ impl Default for HitRecord {
     }
 }
 
-pub type HittableThreadSafe = Arc<dyn Hittable>;
-
 pub struct HittableList {
-    pub objects: Vec<HittableThreadSafe>,
+    pub objects: Vec<Arc<dyn Hittable>>,
 }
 impl Hittable for HittableList {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
@@ -78,7 +74,7 @@ impl Hittable for HittableList {
         hit_anything
     }
 
-    fn bounding_box(&self, time0: f64, time1: f64, output_box: &mut crate::aabb::Aabb) -> bool {
+    fn bounding_box(&self, time0: f64, time1: f64, output_box: &mut Aabb) -> bool {
         if self.objects.is_empty() {
             return false;
         }
@@ -99,11 +95,11 @@ impl Hittable for HittableList {
     }
 }
 impl HittableList {
-    pub fn new(objects: Vec<HittableThreadSafe>) -> Self {
+    pub fn new(objects: Vec<Arc<dyn Hittable>>) -> Self {
         Self { objects }
     }
 
-    pub fn randon_scene(rng: &mut random::Random<f64>) -> HittableList {
+    pub fn randon_scene(rng: &mut Random<f64>) -> HittableList {
         let mut world = HittableList::new(vec![]);
 
         let checker = Arc::new(CheckerTexture::new(
@@ -181,7 +177,7 @@ impl HittableList {
         world
     }
 
-    pub fn two_spheres(_rng: &mut random::Random<f64>) -> HittableList {
+    pub fn two_spheres(_rng: &mut Random<f64>) -> HittableList {
         let mut world = HittableList::new(vec![]);
         let checker = Arc::new(CheckerTexture::new(
             Arc::new(SolidColor::new(Vec3::new(0.2, 0.3, 0.1))),
@@ -218,9 +214,7 @@ impl HittableList {
 
     pub(crate) fn earth() -> HittableList {
         let mut world = HittableList::new(vec![]);
-        let earth_texture = Arc::new(ImageTexture::new(Path::new(
-            "/home/rafal_opilowski/Code/raytracing_in_one_weekend/earthmap.jpg",
-        )));
+        let earth_texture = Arc::new(ImageTexture::new(Path::new("earthmap.jpg")));
         let earth_surface = Arc::new(Lamberian::new(earth_texture));
         let globe = Arc::new(Sphere::new(Vec3::new(0., 0., 0.), 2., earth_surface));
         world.objects.push(globe);
@@ -419,8 +413,7 @@ impl HittableList {
         world
     }
 
-    pub(crate) fn final_scene(random: &mut random::Random<f64>) -> HittableList {
-        let _rng = Random::new(rand::thread_rng(), Uniform::new(0usize, 3));
+    pub(crate) fn final_scene(random: &mut Random<f64>) -> HittableList {
         let mut boxes1 = HittableList::new(vec![]);
         let ground = Arc::new(Lamberian::new(Arc::new(SolidColor::new(Vec3::new(
             0.48, 0.83, 0.53,
@@ -547,6 +540,10 @@ impl HittableList {
             )),
             Vec3::new(-100., 270., 395.),
         )));
-        world
+        let mut return_world = HittableList::new(vec![]);
+        return_world
+            .objects
+            .push(Arc::new(BvhNode::new(&mut world.objects, 0., 1.)));
+        return_world
     }
 }

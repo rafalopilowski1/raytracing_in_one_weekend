@@ -3,7 +3,7 @@ use rand::distributions::Uniform;
 use crate::{random::Random, vec3::Vec3};
 
 pub struct Perlin {
-    ranvec: Vec<Vec3>,
+    ran_vec: Vec<Vec3>,
     perm_x: Vec<usize>,
     perm_y: Vec<usize>,
     perm_z: Vec<usize>,
@@ -19,7 +19,7 @@ impl Perlin {
         let perm_y = Perlin::perlin_generate_perm(&mut rng);
         let perm_z = Perlin::perlin_generate_perm(&mut rng);
         Self {
-            ranvec,
+            ran_vec: ranvec,
             perm_x,
             perm_y,
             perm_z,
@@ -53,7 +53,7 @@ impl Perlin {
         for di in 0..2 {
             for dj in 0..2 {
                 for dk in 0..2 {
-                    c[di as usize][dj as usize][dk as usize] = self.ranvec[self.perm_x
+                    c[di as usize][dj as usize][dk as usize] = self.ran_vec[self.perm_x
                         [(i + di) as usize & 255]
                         ^ self.perm_y[(j + dj) as usize & 255]
                         ^ self.perm_z[(k + dk) as usize & 255]];
@@ -69,14 +69,14 @@ impl Perlin {
         let ww = w * w * (3.0 - 2.0 * w);
         let mut accum = 0.0;
 
-        for i in 0..2 {
-            for j in 0..2 {
-                for k in 0..2 {
+        for (i, elem) in c.iter().enumerate() {
+            for (j, elem2) in elem.iter().enumerate() {
+                for (k, elem3) in elem2.iter().enumerate() {
                     let weight_v = Vec3::new(u - i as f64, v - j as f64, w - k as f64);
                     accum += (i as f64 * uu + (1.0 - i as f64) * (1.0 - uu))
                         * (j as f64 * vv + (1.0 - j as f64) * (1.0 - vv))
                         * (k as f64 * ww + (1.0 - k as f64) * (1.0 - ww))
-                        * Vec3::dot(c[i][j][k], weight_v);
+                        * Vec3::dot(*elem3, weight_v);
                 }
             }
         }
