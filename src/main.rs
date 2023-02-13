@@ -13,13 +13,12 @@ mod vec3;
 use camera::Camera;
 
 use hittable::{HitRecord, HittableList};
-
 use image::ImageEncoder;
 use objects::Hittable;
 use rand::distributions::Uniform;
 use random::Random;
 use ray::Ray;
-
+use rayon::iter::ParallelIterator;
 use std::{
     error::Error, f64::consts::PI, fs::File, io::BufWriter, mem::swap, sync::Arc, time::Instant,
 };
@@ -27,6 +26,7 @@ use vec3::PixelResult;
 use vec3::Vec3;
 
 use mimalloc::MiMalloc;
+use rayon::iter::IntoParallelIterator;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -45,10 +45,11 @@ fn ray_color_iterative(
     scattered: &mut Ray,
     background: &mut Vec3,
     emitted: &mut Vec3,
-    acc: &mut Vec3,
     rng: &mut Random<f64>,
-    depth: &mut i8,
-) {
+    depth: i8,
+) -> Vec3 {
+    let mut acc = Vec3::new(1., 1., 1.);
+    let mut depth_count = depth;
     loop {
         if hittable_list.hit(ray, f64::MIN_POSITIVE, f64::MAX, rec) {
             *emitted = rec.material.as_ref().unwrap().emitted(rec.u, rec.v, rec.p);
@@ -58,28 +59,31 @@ fn ray_color_iterative(
                 .unwrap()
                 .scatter(rng, ray, rec, attenuation, scattered)
             {
-                *acc = *acc * *attenuation + *emitted;
+                acc = acc * *attenuation + *emitted;
                 swap(ray, scattered);
-                *depth = depth.checked_sub(1).unwrap_or(0);
-                if *depth == 0 {
+                depth_count = depth_count.checked_sub(1).unwrap_or(0);
+                if depth_count <= 0 {
                     break;
                 }
             } else {
-                *acc = *acc * *emitted;
+                acc = acc * *emitted;
                 break;
             }
         } else {
-            *acc = *acc * *background;
+            acc = acc * *background;
             break;
         }
     }
+    acc
 }
-const SAMPLES_PER_PIXEL: u32 = 400;
+const SAMPLES_PER_PIXEL: u32 = 10000;
+const MAX_DEPTH: i8 = 50;
+const IMAGE_WIDTH: u32 = 1080;
 fn main() -> Result<(), Box<dyn Error>> {
     // World
     let choice = 7;
     let rng = rand::thread_rng();
-    let mut random = random::Random::new(rng, Uniform::new(0.0, 1.0));
+    let mut random = Random::new(rng, Uniform::new(0.0, 1.0));
     let world = match choice {
         0 => Arc::new(HittableList::randon_scene(&mut random)),
         1 => Arc::new(HittableList::two_spheres(&mut random)),
@@ -105,42 +109,33 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
 
     // Image
-    let image_width: u32 = 800;
-    let image_height: u32 = (image_width as f64 / camera.aspect_ratio) as u32;
-    let mut imgbuf = image::RgbImage::new(image_width, image_height);
+    let image_height: u32 = (IMAGE_WIDTH as f64 / camera.aspect_ratio) as u32;
+    let mut img_buf = image::RgbImage::new(IMAGE_WIDTH, image_height);
 
     // Render
     println!("Rendering...");
 
     let mut progress: u32 = 0;
-    let pool = rayon::ThreadPoolBuilder::new()
-        .thread_name(|idx| format!("Thread {}", idx))
-        .build()?;
-    let (tx, rx) = std::sync::mpsc::channel::<Option<PixelResult>>();
     let mut time1 = Instant::now();
     for h in 0..image_height {
-        for w in 0..image_width {
-            let tx = tx.clone();
-            let world = world.clone();
-            pool.spawn(move || {
-                let pixel_color =
-                    work(image_width - w, image_width, h, image_height, camera, world);
-                let pixel_result = Some(PixelResult::new(
-                    pixel_color,
-                    image_width - w - 1, // TODO: workaround to invert image; investigate why is it needed?
-                    image_height - h - 1, // TODO: workaround to invert image; investigate why is it needed?
-                ));
-                tx.send(pixel_result).unwrap();
-            });
-        }
-    }
+        for w in 0..IMAGE_WIDTH {
+            let pixel_color = work(
+                IMAGE_WIDTH - w,
+                IMAGE_WIDTH,
+                h,
+                image_height,
+                camera,
+                &world,
+                &mut random,
+            );
+            let pixel_result = PixelResult::new(
+                pixel_color,
+                IMAGE_WIDTH - w - 1, // TODO: workaround to invert image; investigate why is it needed?
+                image_height - h - 1, // TODO: workaround to invert image; investigate why is it needed?
+            );
+            img_buf.put_pixel(pixel_result.x, pixel_result.y, pixel_result.color.into());
 
-    drop(tx);
-
-    for (number, t) in rx.iter().enumerate() {
-        if let Some(t) = t {
-            imgbuf.put_pixel(t.x, t.y, t.color.into());
-            let progress2 = number as u32 * 100 / (image_height * image_width);
+            let progress2 = (w + (IMAGE_WIDTH * h) * 100) / (image_height * IMAGE_WIDTH);
             if progress2 > progress {
                 let time2 = Instant::now();
                 let eta = time2.duration_since(time1) * (100 - progress2);
@@ -166,8 +161,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 progress = progress2;
                 time1 = Instant::now();
             }
-        } else {
-            println!("Oops!");
         }
     }
 
@@ -176,7 +169,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let file_ppm = File::create("image3.png")?;
     let buf_writer = BufWriter::new(file_ppm);
     let enc = image::codecs::png::PngEncoder::new(buf_writer);
-    enc.write_image(&imgbuf, image_width, image_height, image::ColorType::Rgb8)?;
+    enc.write_image(&img_buf, IMAGE_WIDTH, image_height, image::ColorType::Rgb8)?;
 
     println!("Done!");
     Ok(())
@@ -188,35 +181,33 @@ fn work(
     height: u32,
     image_height: u32,
     camera: Camera,
-    world: Arc<HittableList>,
+    world: &Arc<HittableList>,
+    rng: &mut Random<f64>,
 ) -> Vec3 {
-    let mut rng = random::Random::new(rand::thread_rng(), Uniform::new(0.0, 1.0));
-    let mut pixel_color = Vec3::new(0.0, 0.0, 0.0);
-    let mut max_depth: i8 = 50;
-    for _ in 0..SAMPLES_PER_PIXEL {
-        let u = (width as f64 + rng.random(None, None)) / (image_width as f64 - 1.);
-        let v = (height as f64 + rng.random(None, None)) / (image_height as f64 - 1.);
-        let mut ray = Camera::get_ray(&mut rng, camera, u, v);
-        let mut rec = HitRecord::default();
-        let mut attenuation = Vec3::default();
-        let mut scattered = Ray::default();
-        let mut background = Vec3::new(0., 0., 0.);
-        let mut emitted = Vec3::default();
-        // `acc` must be (1,1,1) for multiplication to work;
-        let mut acc = Vec3::new(1., 1., 1.);
-        ray_color_iterative(
-            &mut ray,
-            &world,
-            &mut rec,
-            &mut attenuation,
-            &mut scattered,
-            &mut background,
-            &mut emitted,
-            &mut acc,
-            &mut rng,
-            &mut max_depth,
-        );
-        pixel_color += acc;
-    }
-    pixel_color
+    let u = (width as f64 + rng.random(None, None)) / (image_width as f64 - 1.);
+    let v = (height as f64 + rng.random(None, None)) / (image_height as f64 - 1.);
+    (0..SAMPLES_PER_PIXEL)
+        .into_par_iter()
+        .map(|_| {
+            let mut rng = Random::new(rand::thread_rng(), Uniform::new(0.0, 1.0));
+            let mut ray = Camera::get_ray(&mut rng, camera, u, v);
+            let mut rec = HitRecord::default();
+            let mut attenuation = Vec3::default();
+            let mut scattered = Ray::default();
+            let mut background = Vec3::new(0., 0., 0.);
+            let mut emitted = Vec3::default();
+
+            ray_color_iterative(
+                &mut ray,
+                world,
+                &mut rec,
+                &mut attenuation,
+                &mut scattered,
+                &mut background,
+                &mut emitted,
+                &mut rng,
+                MAX_DEPTH,
+            )
+        })
+        .reduce(Vec3::default, |a, b| a + b)
 }

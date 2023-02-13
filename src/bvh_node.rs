@@ -1,3 +1,4 @@
+use rayon::prelude::ParallelSliceMut;
 use std::sync::Arc;
 
 use crate::{
@@ -45,13 +46,13 @@ impl BvhNode {
         let mut output = Self::default();
         let start = 0;
         let end = src_objects.len();
-        let comparator = Self::box_compare;
         let object_span = end - start;
         if object_span == 1 {
             output.left = Some(src_objects[start].clone());
             output.right = Some(src_objects[start].clone());
         } else if object_span == 2 {
-            if comparator(&src_objects[start], &src_objects[start + 1]) == std::cmp::Ordering::Less
+            if Self::box_compare(&src_objects[start], &src_objects[start + 1])
+                == std::cmp::Ordering::Less
             {
                 output.left = Some(src_objects[start].clone());
                 output.right = Some(src_objects[start + 1].clone());
@@ -60,7 +61,7 @@ impl BvhNode {
                 output.right = Some(src_objects[start].clone());
             }
         } else {
-            src_objects.sort_by(comparator);
+            src_objects.par_sort_unstable_by(Self::box_compare);
             let mid = start + object_span / 2;
             output.left = Some(Arc::new(BvhNode::new(
                 &mut src_objects[start..mid],
