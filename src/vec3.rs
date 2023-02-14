@@ -20,11 +20,11 @@ impl Vec3 {
     }
     #[inline(always)]
     pub fn length(v: Self) -> f64 {
-        f64::sqrt(Vec3::length_squared(v))
+        v.x_r.hypot(v.y_g).hypot(v.z_b)
     }
     #[inline(always)]
     pub fn length_squared(v: Vec3) -> f64 {
-        v.x_r * v.x_r + v.y_g * v.y_g + v.z_b * v.z_b
+        Vec3::length(v).powi(2)
     }
 
     pub fn cross(v: Self, rhs: Self) -> Self {
@@ -55,11 +55,18 @@ impl Vec3 {
     }
 
     pub fn random_in_unit_sphere(rng: &mut Random<f64>) -> Self {
-        loop {
-            let p: Vec3 = Vec3::random(rng, Some(-1.0), Some(1.0));
-            if Vec3::length_squared(p) < 1. {
-                return p;
-            }
+        let min = -1.0;
+        let max = 1.0;
+        let rng_x = rng.random(Some(min), Some(max));
+        let rng_y = rng.random(Some(min + rng_x.abs()), Some(max - rng_x.abs()));
+        let rng_z = rng.random(
+            Some(min + rng_x.abs() + rng_y.abs()),
+            Some(max - rng_x.abs() - rng_y.abs()),
+        );
+        Self {
+            x_r: rng_x,
+            y_g: rng_y,
+            z_b: rng_z,
         }
     }
 
@@ -77,15 +84,14 @@ impl Vec3 {
     }
 
     pub fn random_in_unit_disk(rng: &mut Random<f64>) -> Vec3 {
-        loop {
-            let p = Vec3::new(
-                rng.random(Some(-1.0), Some(1.0)),
-                rng.random(Some(-1.0), Some(1.0)),
-                0.,
-            );
-            if Vec3::length_squared(p) < 1. {
-                return p;
-            }
+        let min = -1.0;
+        let max = 1.0;
+        let rng_x = rng.random(Some(min), Some(max));
+        let rng_y = rng.random(Some(min + rng_x.abs()), Some(max - rng_x.abs()));
+        Self {
+            x_r: rng_x,
+            y_g: rng_y,
+            z_b: 0.,
         }
     }
     #[inline(always)]

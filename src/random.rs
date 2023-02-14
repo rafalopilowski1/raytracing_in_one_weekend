@@ -6,7 +6,6 @@ use rand::{rngs::ThreadRng, Rng};
 
 pub struct Random<
     T: rand::distributions::uniform::SampleUniform
-        + PartialOrd
         + Sub<Output = T>
         + Mul<Output = T>
         + Add<Output = T>
@@ -18,7 +17,6 @@ pub struct Random<
 
 impl<
         T: rand::distributions::uniform::SampleUniform
-            + PartialOrd
             + Sub<Output = T>
             + Mul<Output = T>
             + Add<Output = T>

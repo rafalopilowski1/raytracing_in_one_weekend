@@ -1,4 +1,6 @@
 use rayon::prelude::ParallelSliceMut;
+use std::cmp::Ordering;
+
 use std::sync::Arc;
 
 use crate::{aabb::Aabb, hittable::HitRecord, objects::Hittable, ray::Ray};
@@ -34,32 +36,28 @@ impl Hittable for BvhNode {
 impl BvhNode {
     pub fn new(src_objects: &mut [Arc<dyn Hittable>], time0: f64, time1: f64) -> Self {
         let mut output = Self::default();
-        let start = 0;
-        let end = src_objects.len();
-        let object_span = end - start;
-        if object_span == 1 {
-            output.left = Some(src_objects[start].clone());
-            output.right = Some(src_objects[start].clone());
-        } else if object_span == 2 {
-            if Self::box_compare(&src_objects[start], &src_objects[start + 1])
-                == std::cmp::Ordering::Less
-            {
-                output.left = Some(src_objects[start].clone());
-                output.right = Some(src_objects[start + 1].clone());
+        let length = src_objects.len();
+        if length == 1 {
+            output.left = Some(src_objects[0].clone());
+            output.right = Some(src_objects[0].clone());
+        } else if length == 2 {
+            if Self::box_compare(&src_objects[0], &src_objects[1]) == Ordering::Less {
+                output.left = Some(src_objects[0].clone());
+                output.right = Some(src_objects[1].clone());
             } else {
-                output.left = Some(src_objects[start + 1].clone());
-                output.right = Some(src_objects[start].clone());
+                output.left = Some(src_objects[1].clone());
+                output.right = Some(src_objects[0].clone());
             }
         } else {
             src_objects.par_sort_unstable_by(Self::box_compare);
-            let mid = start + object_span / 2;
+            let mid = length / 2;
             output.left = Some(Arc::new(BvhNode::new(
-                &mut src_objects[start..mid],
+                &mut src_objects[0..mid],
                 time0,
                 time1,
             )));
             output.right = Some(Arc::new(BvhNode::new(
-                &mut src_objects[mid..end],
+                &mut src_objects[mid..length],
                 time0,
                 time1,
             )));
@@ -71,17 +69,14 @@ impl BvhNode {
         output.bbox = Aabb::surrounding_box(box_left, box_right);
         output
     }
-    fn box_compare(a: &Arc<dyn Hittable>, b: &Arc<dyn Hittable>) -> std::cmp::Ordering {
+    fn box_compare(a: &Arc<dyn Hittable>, b: &Arc<dyn Hittable>) -> Ordering {
         let mut box_a = Aabb::default();
         let mut box_b = Aabb::default();
         if !a.bounding_box(0.0, 0.0, &mut box_a) || !b.bounding_box(0.0, 0.0, &mut box_b) {
             panic!("No bounding box in BvhNode constructor.");
         }
 
-        box_a.min[0]
-            .total_cmp(&box_b.min[0])
-            .then(box_a.min[1].total_cmp(&box_b.min[1]))
-            .then(box_a.min[2].total_cmp(&box_b.min[2]))
+        box_a.partial_cmp(&box_b).unwrap()
     }
     fn get_surrounding_box(
         output: &BvhNode,

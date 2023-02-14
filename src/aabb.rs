@@ -1,5 +1,6 @@
 use crate::{hittable::HitRecord, objects::Hittable, ray::Ray, vec3::Vec3};
-#[derive(Default, Copy, Clone, Debug)]
+
+#[derive(Default, Copy, Clone, Debug, PartialOrd, PartialEq)]
 pub struct Aabb {
     pub min: Vec3,
     pub max: Vec3,
