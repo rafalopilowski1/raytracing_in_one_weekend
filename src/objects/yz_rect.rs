@@ -14,15 +14,15 @@ pub struct yz_rect {
 }
 
 impl yz_rect {
-    pub fn new(y0: f64, y1: f64, z0: f64, z1: f64, k: f64, mp: Arc<dyn Material>) -> Self {
-        Self {
+    pub fn new(y0: f64, y1: f64, z0: f64, z1: f64, k: f64, mp: Arc<dyn Material>) -> Arc<Self> {
+        Arc::from(Self {
             mp,
             y0,
             y1,
             z0,
             z1,
             k,
-        }
+        })
     }
 }
 impl Hittable for yz_rect {

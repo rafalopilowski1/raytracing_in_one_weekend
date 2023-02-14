@@ -1,12 +1,7 @@
-use crate::hittable::HitRecord;
-
-use crate::Ray;
-
-use crate::random::Random;
+use crate::{hittable::HitRecord, random::Random, vec3::Vec3, Ray};
+use std::sync::Arc;
 
 use super::Material;
-
-use crate::vec3::Vec3;
 
 #[derive(Clone, Copy)]
 pub struct Metal {
@@ -35,10 +30,10 @@ impl Material for Metal {
 }
 
 impl Metal {
-    pub fn new(albedo: Vec3, fuzz: f64) -> Self {
-        Self {
+    pub fn new(albedo: Vec3, fuzz: f64) -> Arc<Self> {
+        Arc::from(Self {
             albedo,
             fuzz: if fuzz < 1. { fuzz } else { 1. },
-        }
+        })
     }
 }

@@ -18,21 +18,14 @@ use objects::Hittable;
 use rand::distributions::Uniform;
 use random::Random;
 use ray::Ray;
-use rayon::iter::ParallelIterator;
-use std::{
-    error::Error, f64::consts::PI, fs::File, io::BufWriter, mem::swap, sync::Arc, time::Instant,
-};
+use rayon::{iter::IntoParallelIterator, iter::ParallelIterator};
+use std::{error::Error, fs::File, io::BufWriter, mem::swap, sync::Arc, time::Instant};
 use vec3::Vec3;
 
 use mimalloc::MiMalloc;
-use rayon::iter::IntoParallelIterator;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
-#[inline(always)]
-fn degrees_to_radians(degrees: f64) -> f64 {
-    degrees * (PI) / 180.0
-}
 
 const SAMPLES_PER_PIXEL: u32 = 1000;
 const MAX_DEPTH: i8 = 50;
@@ -43,20 +36,19 @@ const IMAGE_HEIGHT: u32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as u32;
 fn main() -> Result<(), Box<dyn Error>> {
     // World
     let choice = 7;
-    let rng = rand::thread_rng();
-    let mut random = Random::new(rng, Uniform::new(0.0, 1.0));
+    let mut rng = rand::thread_rng();
+    let mut random = Random::new(&mut rng, Uniform::new(0.0, 1.0));
     let world = match choice {
-        0 => Arc::new(HittableList::randon_scene(&mut random)),
-        1 => Arc::new(HittableList::two_spheres(&mut random)),
-        2 => Arc::new(HittableList::two_perlin_spheres(&mut random)),
-        3 => Arc::new(HittableList::earth()),
-        4 => Arc::new(HittableList::simple_light(&mut random)),
-        5 => Arc::new(HittableList::cornell_box()),
-        6 => Arc::new(HittableList::cornell_smoke()),
-        7 => Arc::new(HittableList::final_scene(&mut random)),
-        _ => Arc::new(HittableList::randon_scene(&mut random)),
+        0 => HittableList::randon_scene(&mut random),
+        1 => HittableList::two_spheres(&mut random),
+        2 => HittableList::two_perlin_spheres(&mut random),
+        3 => HittableList::earth(),
+        4 => HittableList::simple_light(&mut random),
+        5 => HittableList::cornell_box(),
+        6 => HittableList::cornell_smoke(),
+        7 => HittableList::final_scene(&mut random),
+        _ => HittableList::randon_scene(&mut random),
     };
-
     // Camera
     let camera: Camera = Camera::new(
         Vec3::new(478., 278., -600.),
@@ -77,28 +69,28 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut progress: u32 = 0;
     let mut time1 = Instant::now();
-    for h in 0..IMAGE_HEIGHT {
-        for w in 0..IMAGE_WIDTH {
-            // TODO: workaround to invert image; investigate why is it needed?
-            let pixel_color = work(
-                IMAGE_WIDTH - w,
-                IMAGE_WIDTH,
-                h,
-                IMAGE_HEIGHT,
-                camera,
-                &world,
-                &mut random,
-            );
-            // TODO: workaround to invert image; investigate why is it needed?
-            img_buf.put_pixel(
-                IMAGE_WIDTH - w - 1,
-                IMAGE_HEIGHT - h - 1,
-                pixel_color.into(),
-            );
-
-            display_progress(&mut progress, &mut time1, h, w);
-        }
-    }
+    (0..IMAGE_WIDTH * IMAGE_HEIGHT).for_each(|i| {
+        let mut random = Random::new(&mut rng, Uniform::new(0.0, 1.0));
+        let w = i % IMAGE_WIDTH;
+        let h = i / IMAGE_WIDTH;
+        // TODO: workaround to invert image; investigate why is it needed?
+        let pixel_color = work(
+            IMAGE_WIDTH - w,
+            IMAGE_WIDTH,
+            h,
+            IMAGE_HEIGHT,
+            camera,
+            &world,
+            &mut random,
+        );
+        // TODO: workaround to invert image; investigate why is it needed?
+        img_buf.put_pixel(
+            IMAGE_WIDTH - w - 1,
+            IMAGE_HEIGHT - h - 1,
+            pixel_color.into(),
+        );
+        display_progress(&mut progress, &mut time1, h, w);
+    });
 
     // Saving
     println!("Saving...");
@@ -154,7 +146,8 @@ fn work(
     (0..SAMPLES_PER_PIXEL)
         .into_par_iter()
         .map(|_| {
-            let mut rng = Random::new(rand::thread_rng(), Uniform::new(0.0, 1.0));
+            let mut rand = rand::thread_rng();
+            let mut rng = Random::new(&mut rand, Uniform::new(0.0, 1.0));
             let mut ray = Camera::get_ray(&mut rng, camera, u, v);
             let mut rec = HitRecord::default();
             let mut attenuation = Vec3::default();

@@ -96,9 +96,9 @@ impl Vec3 {
     }
     #[inline(always)]
     pub fn near_zero(vec: Self) -> bool {
-        f64::abs(vec.x_r) < f64::MIN_POSITIVE
-            && f64::abs(vec.y_g) < f64::MIN_POSITIVE
-            && f64::abs(vec.z_b) < f64::MIN_POSITIVE
+        vec.x_r.abs() < f64::MIN_POSITIVE
+            && vec.y_g.abs() < f64::MIN_POSITIVE
+            && vec.z_b.abs() < f64::MIN_POSITIVE
     }
     #[inline(always)]
     pub fn reflect(v: Self, n: Self) -> Vec3 {
@@ -106,9 +106,9 @@ impl Vec3 {
     }
 
     pub fn reflact(uv: Self, n: Self, etai_over_etat: f64) -> Self {
-        let cos_theta = f64::min(Vec3::dot(-uv, n), 1.0);
+        let cos_theta = Vec3::dot(-uv, n).min(1.0);
         let r_out_perp = (uv + n * cos_theta) * etai_over_etat;
-        let r_out_parallel = n * -f64::sqrt(f64::abs(1.0 - Vec3::length_squared(r_out_perp)));
+        let r_out_parallel = n * -(1.0 - Vec3::length_squared(r_out_perp)).abs().sqrt();
         r_out_perp + r_out_parallel
     }
 }
@@ -130,9 +130,9 @@ impl From<Vec3> for Rgb<u8> {
         let mut b = vec.z_b;
 
         let scale = 1.0 / crate::SAMPLES_PER_PIXEL as f64;
-        r = f64::sqrt(scale * r);
-        g = f64::sqrt(scale * g);
-        b = f64::sqrt(scale * b);
+        r = (scale * r).sqrt();
+        g = (scale * g).sqrt();
+        b = (scale * b).sqrt();
 
         let ir: u8 = (r.clamp(0.0, 1.0) * 256.) as u8;
         let ig: u8 = (g.clamp(0.0, 1.0) * 256.) as u8;

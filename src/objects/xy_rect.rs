@@ -14,15 +14,15 @@ pub struct xy_rect {
 }
 
 impl xy_rect {
-    pub fn new(x0: f64, x1: f64, y0: f64, y1: f64, k: f64, mp: Arc<dyn Material>) -> Self {
-        Self {
+    pub fn new(x0: f64, x1: f64, y0: f64, y1: f64, k: f64, mp: Arc<dyn Material>) -> Arc<Self> {
+        Arc::from(Self {
             mp,
             x0,
             x1,
             y0,
             y1,
             k,
-        }
+        })
     }
 }
 

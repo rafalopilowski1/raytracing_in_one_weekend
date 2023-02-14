@@ -5,27 +5,29 @@ use rand::distributions::Uniform;
 use rand::{rngs::ThreadRng, Rng};
 
 pub struct Random<
+    'a,
     T: rand::distributions::uniform::SampleUniform
         + Sub<Output = T>
         + Mul<Output = T>
         + Add<Output = T>
         + Copy,
 > {
-    pub rng: ThreadRng,
+    pub rng: &'a mut ThreadRng,
     pub uniform: Uniform<T>,
 }
 
 impl<
+        'a,
         T: rand::distributions::uniform::SampleUniform
             + Sub<Output = T>
             + Mul<Output = T>
             + Add<Output = T>
             + Copy,
-    > Random<T>
+    > Random<'a, T>
 where
     T::Sampler: Copy,
 {
-    pub fn new(rng: ThreadRng, uniform: Uniform<T>) -> Self {
+    pub fn new(rng: &'a mut ThreadRng, uniform: Uniform<T>) -> Self {
         Self { rng, uniform }
     }
     pub fn random(&mut self, min: Option<T>, max: Option<T>) -> T {

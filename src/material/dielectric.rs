@@ -1,10 +1,5 @@
-use crate::vec3::Vec3;
-
-use crate::hittable::HitRecord;
-
-use crate::Ray;
-
-use crate::random::Random;
+use crate::{hittable::HitRecord, random::Random, vec3::Vec3, Ray};
+use std::sync::Arc;
 
 use super::Material;
 
@@ -30,8 +25,8 @@ impl Material for Dielectric {
         };
         let unit_direction = Vec3::unit_vector(ray_in.direction);
 
-        let cos_theta = f64::min(Vec3::dot(-unit_direction, rec.normal), 1.0);
-        let sin_theta = f64::sqrt(1.0 - cos_theta * cos_theta);
+        let cos_theta = Vec3::dot(-unit_direction, rec.normal).min(1.0);
+        let sin_theta = (1.0 - cos_theta.powi(2)).sqrt();
 
         let cannot_refract = refraction_ratio * sin_theta > 1.0;
         let direction: Vec3 = if cannot_refract
@@ -48,13 +43,13 @@ impl Material for Dielectric {
 }
 
 impl Dielectric {
-    pub fn new(ir: f64) -> Self {
-        Self { ir }
+    pub fn new(ir: f64) -> Arc<Self> {
+        Arc::from(Self { ir })
     }
 
     pub fn reflactance(cosine: f64, ref_idx: f64) -> f64 {
         let mut r0 = (1. - ref_idx) / (1. + ref_idx);
-        r0 = r0 * r0;
-        r0 * (1. - r0) * f64::powf(1. - cosine, 5.0)
+        r0 = r0.powi(2);
+        r0 * (1. - r0) * (1. - cosine).powi(5)
     }
 }

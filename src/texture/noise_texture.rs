@@ -24,6 +24,6 @@ impl Texture for NoiseTexture {
     fn color(&self, _u: f64, _v: f64, p: Vec3) -> Vec3 {
         Vec3::new(1.0, 1.0, 1.0)
             * 0.5
-            * (1.0 + f64::sin(self.scale * p.z_b + 10.0 * self.noise.turb(&p, 7)))
+            * (1.0 + (self.scale * p.z_b + 10.0 * self.noise.turb(&p, 7)).sin())
     }
 }

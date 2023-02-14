@@ -1,4 +1,5 @@
 use super::Texture;
+use std::sync::Arc;
 
 use crate::vec3::Vec3;
 
@@ -7,8 +8,8 @@ pub struct SolidColor {
 }
 
 impl SolidColor {
-    pub fn new(color_value: Vec3) -> Self {
-        Self { color_value }
+    pub fn new(color_value: Vec3) -> Arc<Self> {
+        Arc::from(Self { color_value })
     }
 }
 

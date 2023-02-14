@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{material::Material, ray::Ray, hittable::HitRecord, aabb::Aabb, vec3::Vec3};
+use crate::{aabb::Aabb, hittable::HitRecord, material::Material, ray::Ray, vec3::Vec3};
 
 use super::Hittable;
 
@@ -14,15 +14,15 @@ pub struct xz_rect {
 }
 
 impl xz_rect {
-    pub fn new(x0: f64, x1: f64, z0: f64, z1: f64, k: f64, mp: Arc<dyn Material>) -> Self {
-        Self {
+    pub fn new(x0: f64, x1: f64, z0: f64, z1: f64, k: f64, mp: Arc<dyn Material>) -> Arc<Self> {
+        Arc::from(Self {
             mp,
             x0,
             x1,
             z0,
             z1,
             k,
-        }
+        })
     }
 }
 

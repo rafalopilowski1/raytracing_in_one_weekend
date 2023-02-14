@@ -1,4 +1,9 @@
-use crate::{degrees_to_radians, random::Random, ray::Ray, vec3::Vec3};
+use crate::{random::Random, ray::Ray, vec3::Vec3};
+use std::f64::consts::PI;
+#[inline(always)]
+fn degrees_to_radians(degrees: f64) -> f64 {
+    degrees * (PI) / 180.0
+}
 #[derive(Clone, Copy)]
 pub struct Camera {
     pub lens_radius: f64,
@@ -29,8 +34,8 @@ impl Camera {
         time1: f64,
     ) -> Self {
         let theta = degrees_to_radians(vfov);
-        let h = f64::tan(theta / 2.0);
-        let viewport_height: f64 = 2.0 * h;
+        let h = (theta / 2.0).tan();
+        let viewport_height = 2.0 * h;
         let viewport_width = aspect_ratio * viewport_height;
         let focus_dist = Vec3::length(lookfrom - lookat);
 

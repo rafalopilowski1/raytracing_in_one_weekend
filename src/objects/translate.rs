@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{vec3::Vec3, ray::Ray, hittable::HitRecord, aabb::Aabb};
+use crate::{aabb::Aabb, hittable::HitRecord, ray::Ray, vec3::Vec3};
 
 use super::Hittable;
 
@@ -9,8 +9,8 @@ pub struct Translate {
     pub offset: Vec3,
 }
 impl Translate {
-    pub fn new(hittable: Arc<dyn Hittable>, offset: Vec3) -> Self {
-        Self { hittable, offset }
+    pub fn new(hittable: Arc<dyn Hittable>, offset: Vec3) -> Arc<Self> {
+        Arc::from(Self { hittable, offset })
     }
 }
 
@@ -33,4 +33,3 @@ impl Hittable for Translate {
         }
     }
 }
-

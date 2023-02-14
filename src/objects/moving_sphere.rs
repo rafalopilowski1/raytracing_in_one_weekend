@@ -29,13 +29,13 @@ impl Hittable for MovingSphere {
         let oc = ray.origin - self.center(ray.time);
         let a: f64 = Vec3::length_squared(ray.direction);
         let half_b: f64 = Vec3::dot(oc, ray.direction);
-        let c: f64 = Vec3::length_squared(oc) - self.radius * self.radius;
-        let discriminant = half_b * half_b - a * c;
+        let c: f64 = Vec3::length_squared(oc) - self.radius.powi(2);
+        let discriminant = half_b.powi(2) - a * c;
 
         if discriminant < 0. {
             return false;
         }
-        let sqrtd = f64::sqrt(discriminant);
+        let sqrtd = discriminant.sqrt();
 
         // Find the nearest root that lies in the acceptable range
 

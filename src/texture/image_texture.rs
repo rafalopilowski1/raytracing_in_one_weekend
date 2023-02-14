@@ -50,8 +50,6 @@ impl Texture for ImageTexture {
             if j >= self.height {
                 j = self.height - 1;
             }
-
-            // let color_scale = 1.0 / 255.0;
             let pixel = data.get_pixel(i as u32, j as u32);
             Vec3::new(pixel[0] as f64, pixel[1] as f64, pixel[2] as f64)
         } else {

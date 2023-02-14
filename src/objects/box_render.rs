@@ -16,61 +16,61 @@ pub struct BoxRender {
 }
 
 impl BoxRender {
-    pub fn new(p0: Vec3, p1: Vec3, material: Arc<dyn Material>) -> Self {
+    pub fn new(p0: Vec3, p1: Vec3, material: Arc<dyn Material>) -> Arc<Self> {
         let mut sides = HittableList::new(vec![]);
-        sides.objects.push(Arc::new(xy_rect::new(
+        sides.objects.push(xy_rect::new(
             p0.x_r,
             p1.x_r,
             p0.y_g,
             p1.y_g,
             p1.z_b,
             material.clone(),
-        )));
-        sides.objects.push(Arc::new(xy_rect::new(
+        ));
+        sides.objects.push(xy_rect::new(
             p0.x_r,
             p1.x_r,
             p0.y_g,
             p1.y_g,
             p0.z_b,
             material.clone(),
-        )));
-        sides.objects.push(Arc::new(xz_rect::new(
+        ));
+        sides.objects.push(xz_rect::new(
             p0.x_r,
             p1.x_r,
             p0.z_b,
             p1.z_b,
             p1.y_g,
             material.clone(),
-        )));
-        sides.objects.push(Arc::new(xz_rect::new(
+        ));
+        sides.objects.push(xz_rect::new(
             p0.x_r,
             p1.x_r,
             p0.z_b,
             p1.z_b,
             p0.y_g,
             material.clone(),
-        )));
-        sides.objects.push(Arc::new(yz_rect::new(
+        ));
+        sides.objects.push(yz_rect::new(
             p0.y_g,
             p1.y_g,
             p0.z_b,
             p1.z_b,
             p1.x_r,
             material.clone(),
-        )));
-        sides.objects.push(Arc::new(yz_rect::new(
+        ));
+        sides.objects.push(yz_rect::new(
             p0.y_g,
             p1.y_g,
             p0.z_b,
             p1.z_b,
             p0.x_r,
             material.clone(),
-        )));
-        Self {
+        ));
+        Arc::from(Self {
             pmin: p0,
             pmax: p1,
             sides,
-        }
+        })
     }
 }
 

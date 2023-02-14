@@ -13,7 +13,7 @@ pub struct YRotation {
 }
 
 impl YRotation {
-    pub fn new(hittable: Arc<dyn Hittable>, angle: f64) -> Self {
+    pub fn new(hittable: Arc<dyn Hittable>, angle: f64) -> Arc<Self> {
         let radians = angle.to_radians();
         let sin_theta = radians.sin();
         let cos_theta = radians.cos();
@@ -38,13 +38,13 @@ impl YRotation {
             }
         }
         bbox = Aabb::new(min, max);
-        Self {
+        Arc::from(Self {
             hittable,
             sin_theta,
             cos_theta,
             has_box,
             bbox,
-        }
+        })
     }
 }
 

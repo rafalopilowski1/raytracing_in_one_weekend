@@ -1,14 +1,6 @@
-use crate::vec3::Vec3;
-
-use crate::hittable::HitRecord;
-
-use crate::Ray;
-
-use crate::random::Random;
+use crate::{hittable::HitRecord, random::Random, texture::Texture, vec3::Vec3, Ray};
 
 use super::Material;
-
-use crate::texture::Texture;
 
 use std::sync::Arc;
 
@@ -37,7 +29,7 @@ impl Material for Lamberian {
 }
 
 impl Lamberian {
-    pub fn new(albedo: Arc<dyn Texture>) -> Self {
-        Self { albedo }
+    pub fn new(albedo: Arc<dyn Texture>) -> Arc<Self> {
+        Arc::from(Self { albedo })
     }
 }

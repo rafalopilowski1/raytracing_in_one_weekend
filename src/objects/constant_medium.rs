@@ -1,10 +1,6 @@
 use std::sync::Arc;
 
-use crate::{
-    hittable::HitRecord,
-    material::Material,
-    vec3::Vec3,
-};
+use crate::{hittable::HitRecord, material::Material, ray::Ray, vec3::Vec3};
 
 use super::Hittable;
 
@@ -19,17 +15,17 @@ impl ConstantMedium {
         boundary: Arc<dyn Hittable>,
         density: f64,
         phase_function: Arc<dyn Material>,
-    ) -> Self {
-        Self {
+    ) -> Arc<Self> {
+        Arc::from(Self {
             boundary,
             phase_function,
             neg_inv_density: -1.0 / density,
-        }
+        })
     }
 }
 
 impl Hittable for ConstantMedium {
-    fn hit(&self, ray: &crate::ray::Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
         let mut rec1 = HitRecord::default();
         let mut rec2 = HitRecord::default();
         if !self.boundary.hit(ray, f64::MIN, f64::MAX, &mut rec1) {

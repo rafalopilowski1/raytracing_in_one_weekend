@@ -10,11 +10,11 @@ pub struct Perlin {
 }
 impl Perlin {
     pub fn new(random: &mut Random<f64>) -> Self {
-        let mut ranvec = Vec::new();
-        for _ in 0..256 {
-            ranvec.push(Vec3::random(random, Some(-1.0), Some(1.0)));
-        }
-        let mut rng = Random::new(rand::thread_rng(), Uniform::new(0usize, 256));
+        let ranvec = (0..256)
+            .map(|_| Vec3::random(random, Some(-1.0), Some(1.0)))
+            .collect();
+        let mut rand = rand::thread_rng();
+        let mut rng = Random::new(&mut rand, Uniform::new(0usize, 256));
         let perm_x = Perlin::perlin_generate_perm(&mut rng);
         let perm_y = Perlin::perlin_generate_perm(&mut rng);
         let perm_z = Perlin::perlin_generate_perm(&mut rng);
@@ -26,18 +26,12 @@ impl Perlin {
         }
     }
     fn perlin_generate_perm(rng: &mut Random<usize>) -> Vec<usize> {
-        let mut p = Vec::new();
-        for i in 0..256 {
-            p.push(i);
-        }
-        Self::permute(rng, &mut p, 256);
+        let mut p = (0..256).collect::<Vec<usize>>();
+        Self::permute(rng, &mut p);
         p
     }
-    fn permute(rng: &mut Random<usize>, array: &mut [usize], n: usize) {
-        for i in (n - 1)..0 {
-            let target = rng.random(Some(0), Some(i));
-            array.swap(i, target);
-        }
+    fn permute(rng: &mut Random<usize>, array: &mut [usize]) {
+        ((array.len() - 1)..0).for_each(|i| array.swap(i, rng.random(Some(0), Some(i))))
     }
     pub fn noise(&self, p: &Vec3) -> f64 {
         let u = p.x_r - p.x_r.floor();
@@ -50,13 +44,15 @@ impl Perlin {
 
         let mut c = [[[Vec3::new(0.0, 0.0, 0.0); 2]; 2]; 2];
 
-        for di in 0..2 {
-            for dj in 0..2 {
-                for dk in 0..2 {
-                    c[di as usize][dj as usize][dk as usize] = self.ran_vec[self.perm_x
-                        [(i + di) as usize & 255]
-                        ^ self.perm_y[(j + dj) as usize & 255]
-                        ^ self.perm_z[(k + dk) as usize & 255]];
+        for (di, elem) in c.iter_mut().enumerate() {
+            for (dj, elem2) in elem.iter_mut().enumerate() {
+                for (dk, elem3) in elem2.iter_mut().enumerate() {
+                    let perm_x_index = ((i + di as i64) & 255) as usize;
+                    let perm_y_index = ((j + dj as i64) & 255) as usize;
+                    let perm_z_index = ((k + dk as i64) & 255) as usize;
+                    *elem3 = self.ran_vec[self.perm_x[perm_x_index]
+                        ^ self.perm_y[perm_y_index]
+                        ^ self.perm_z[perm_z_index]];
                 }
             }
         }
@@ -64,34 +60,43 @@ impl Perlin {
         Self::perlin_interp(c, u, v, w)
     }
     fn perlin_interp(c: [[[Vec3; 2]; 2]; 2], u: f64, v: f64, w: f64) -> f64 {
-        let uu = u * u * (3.0 - 2.0 * u);
-        let vv = v * v * (3.0 - 2.0 * v);
-        let ww = w * w * (3.0 - 2.0 * w);
-        let mut accum = 0.0;
-
-        for (i, elem) in c.iter().enumerate() {
-            for (j, elem2) in elem.iter().enumerate() {
-                for (k, elem3) in elem2.iter().enumerate() {
-                    let weight_v = Vec3::new(u - i as f64, v - j as f64, w - k as f64);
-                    accum += (i as f64 * uu + (1.0 - i as f64) * (1.0 - uu))
-                        * (j as f64 * vv + (1.0 - j as f64) * (1.0 - vv))
-                        * (k as f64 * ww + (1.0 - k as f64) * (1.0 - ww))
-                        * Vec3::dot(*elem3, weight_v);
-                }
-            }
-        }
-        accum
+        let uu = u.powi(2) * (3.0 - 2.0 * u);
+        let vv = v.powi(2) * (3.0 - 2.0 * v);
+        let ww = w.powi(2) * (3.0 - 2.0 * w);
+        c.iter()
+            .enumerate()
+            .map(|(i, elem)| {
+                elem.iter()
+                    .enumerate()
+                    .map(|(j, elem2)| {
+                        elem2
+                            .iter()
+                            .enumerate()
+                            .map(|(k, elem3)| {
+                                let weight_v = Vec3::new(u - i as f64, v - j as f64, w - k as f64);
+                                (i as f64 * uu + (1.0 - i as f64) * (1.0 - uu))
+                                    * (j as f64 * vv + (1.0 - j as f64) * (1.0 - vv))
+                                    * (k as f64 * ww + (1.0 - k as f64) * (1.0 - ww))
+                                    * Vec3::dot(*elem3, weight_v)
+                            })
+                            .fold(0., |a, b| a + b)
+                    })
+                    .fold(0., |a, b| a + b)
+            })
+            .fold(0., |a, b| a + b)
     }
     pub fn turb(&self, p: &Vec3, depth: i32) -> f64 {
-        let mut accum = 0.0;
         let mut temp_p = *p;
         let mut weight = 1.0;
 
-        for _ in 0..depth {
-            accum += weight * self.noise(&temp_p);
-            weight *= 0.5;
-            temp_p *= 2.0;
-        }
-        accum.abs()
+        (0..depth)
+            .map(|_| {
+                let output = weight * self.noise(&temp_p);
+                weight *= 0.5;
+                temp_p *= 2.0;
+                output
+            })
+            .fold(0., |a, b| a + b)
+            .abs()
     }
 }

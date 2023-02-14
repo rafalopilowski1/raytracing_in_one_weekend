@@ -1,4 +1,5 @@
 use crate::{aabb::Aabb, hittable::HitRecord, material::Material, ray::Ray};
+use std::f64::consts;
 
 use std::sync::Arc;
 
@@ -16,13 +17,13 @@ impl Hittable for Sphere {
         let a: f64 = Vec3::length_squared(ray.direction);
         let oc = ray.origin - self.center;
         let half_b: f64 = Vec3::dot(oc, ray.direction);
-        let c: f64 = Vec3::length_squared(oc) - self.radius * self.radius;
-        let discriminant = half_b * half_b - a * c;
+        let c: f64 = Vec3::length_squared(oc) - self.radius.powi(2);
+        let discriminant = half_b.powi(2) - a * c;
 
         if discriminant < 0. {
             return false;
         }
-        let sqrtd = f64::sqrt(discriminant);
+        let sqrtd = discriminant.sqrt();
 
         // Find the nearest root that lies in the acceptable range
 
@@ -51,17 +52,17 @@ impl Hittable for Sphere {
     }
 }
 impl Sphere {
-    pub fn new(center: Vec3, radius: f64, material: Arc<dyn Material>) -> Self {
-        Self {
+    pub fn new(center: Vec3, radius: f64, material: Arc<dyn Material>) -> Arc<Self> {
+        Arc::from(Self {
             center,
             radius,
             material,
-        }
+        })
     }
     pub fn get_sphere_uv(p: Vec3, u: &mut f64, v: &mut f64) {
-        let phi = f64::atan2(p.z_b, p.x_r);
-        let theta = f64::asin(p.y_g);
-        *u = 1. - (phi + std::f64::consts::PI) / (2. * std::f64::consts::PI);
-        *v = (theta + std::f64::consts::FRAC_PI_2) / std::f64::consts::PI;
+        let phi = p.z_b.atan2(p.x_r);
+        let theta = p.y_g.asin();
+        *u = 1. - (phi + consts::PI) / (2. * consts::PI);
+        *v = (theta + consts::FRAC_PI_2) / consts::PI;
     }
 }
