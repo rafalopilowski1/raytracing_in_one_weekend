@@ -34,9 +34,9 @@ fn degrees_to_radians(degrees: f64) -> f64 {
     degrees * (PI) / 180.0
 }
 
-const SAMPLES_PER_PIXEL: u32 = 500;
+const SAMPLES_PER_PIXEL: u32 = 1000;
 const MAX_DEPTH: i8 = 50;
-const IMAGE_WIDTH: u32 = 854;
+const IMAGE_WIDTH: u32 = 1280;
 const ASPECT_RATIO: f64 = 16. / 9.;
 const IMAGE_HEIGHT: u32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as u32;
 
