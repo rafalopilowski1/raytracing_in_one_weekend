@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{aabb::Aabb, vec3::Vec3};
 
-use super::Hittable;
+use crate::Hittable;
 
 pub struct YRotation {
     pub hittable: Arc<dyn Hittable>,

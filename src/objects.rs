@@ -7,9 +7,7 @@ pub trait Hittable: Send + Sync {
 pub mod box_render;
 pub mod constant_medium;
 pub mod moving_sphere;
+pub mod rect;
 pub mod sphere;
 pub mod translate;
-pub mod xy_rect;
-pub mod xz_rect;
 pub mod y_rotation;
-pub mod yz_rect;

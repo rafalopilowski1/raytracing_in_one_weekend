@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{hittable::HitRecord, random::Random, ray::Ray, texture::Texture, vec3::Vec3};
 
-use super::Material;
+use crate::Material;
 
 pub struct DiffuseLight {
     emit: Arc<dyn Texture>,

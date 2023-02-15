@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::vec3::Vec3;
 
-use super::Hittable;
+use crate::Hittable;
 
 pub struct Sphere {
     pub center: Vec3,

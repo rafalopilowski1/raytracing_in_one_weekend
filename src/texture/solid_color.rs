@@ -1,4 +1,4 @@
-use super::Texture;
+use crate::texture::Texture;
 use std::sync::Arc;
 
 use crate::vec3::Vec3;

@@ -8,6 +8,7 @@ pub struct Ray {
 }
 
 impl Ray {
+    #[inline(always)]
     pub fn at(self, t: f64) -> Vec3 {
         self.origin + (self.direction * t)
     }

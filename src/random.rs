@@ -1,8 +1,6 @@
 use std::ops::{Add, Mul, Sub};
 
-use rand::distributions::Uniform;
-
-use rand::{rngs::ThreadRng, Rng};
+use rand::{distributions::Uniform, rngs::ThreadRng, Rng};
 
 pub struct Random<
     'a,

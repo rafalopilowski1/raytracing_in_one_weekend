@@ -2,6 +2,7 @@ mod aabb;
 mod bvh_node;
 mod camera;
 mod hittable;
+mod image_env_builder;
 mod material;
 mod objects;
 mod perlin;
@@ -13,7 +14,8 @@ mod vec3;
 use camera::Camera;
 
 use hittable::{HitRecord, HittableList};
-use image::ImageEncoder;
+use image::{codecs::png::PngEncoder, ColorType, ImageEncoder};
+use material::Material;
 use objects::Hittable;
 use rand::distributions::Uniform;
 use random::Random;
@@ -23,6 +25,8 @@ use std::{error::Error, fs::File, io::BufWriter, mem::swap, sync::Arc, time::Ins
 use vec3::Vec3;
 
 use mimalloc::MiMalloc;
+
+use crate::image_env_builder::ImageEnvBuilder;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -38,28 +42,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let choice = 7;
     let mut rng = rand::thread_rng();
     let mut random = Random::new(&mut rng, Uniform::new(0.0, 1.0));
-    let world = match choice {
-        0 => HittableList::randon_scene(&mut random),
-        1 => HittableList::two_spheres(&mut random),
-        2 => HittableList::two_perlin_spheres(&mut random),
-        3 => HittableList::earth(),
-        4 => HittableList::simple_light(&mut random),
-        5 => HittableList::cornell_box(),
-        6 => HittableList::cornell_smoke(),
-        7 => HittableList::final_scene(&mut random),
-        _ => HittableList::randon_scene(&mut random),
-    };
     // Camera
-    let camera: Camera = Camera::new(
-        Vec3::new(478., 278., -600.),
-        Vec3::new(278., 278., 0.),
-        Vec3::new(0., 1., 0.),
-        40.0,
-        ASPECT_RATIO,
-        0.1,
-        0.,
-        1.,
-    );
+    let (camera, world) = ImageEnvBuilder::build(choice, &mut random);
 
     // Image
     let mut img_buf = image::RgbImage::new(IMAGE_WIDTH, IMAGE_HEIGHT);
@@ -94,10 +78,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Saving
     println!("Saving...");
-    let file_ppm = File::create("image3.png")?;
+    let file_ppm = File::create("./render.png")?;
     let buf_writer = BufWriter::new(file_ppm);
-    let enc = image::codecs::png::PngEncoder::new(buf_writer);
-    enc.write_image(&img_buf, IMAGE_WIDTH, IMAGE_HEIGHT, image::ColorType::Rgb8)?;
+    let enc = PngEncoder::new(buf_writer);
+    enc.write_image(&img_buf, IMAGE_WIDTH, IMAGE_HEIGHT, ColorType::Rgb8)?;
 
     println!("Done!");
     Ok(())
@@ -107,24 +91,35 @@ fn display_progress(progress: &mut u32, time1: &mut Instant, h: u32, w: u32) {
     let progress2 = (w + (IMAGE_WIDTH * h) * 100) / (IMAGE_HEIGHT * IMAGE_WIDTH);
     if progress2 > *progress {
         let time2 = Instant::now();
-        let eta = time2.duration_since(*time1) * (100 - progress2);
+        let duration_since = time2.duration_since(*time1);
+        let eta = duration_since * (100 - progress2);
         if eta.as_secs() > 3600 {
             println!(
-                "{0}% - ETA: {1} h. {2} min. {3} sec.",
+                "{0}% - ETA: {1} h. {2} min. {3} sec. ({4:.2} rays/sec)",
                 progress2,
                 eta.as_secs() / 3600,
                 (eta.as_secs() % 3600) / 60,
-                eta.as_secs() % 60
+                eta.as_secs() % 60,
+                SAMPLES_PER_PIXEL as f64 / duration_since.as_secs_f64()
+                    * (IMAGE_WIDTH as f64 * IMAGE_HEIGHT as f64 * 0.01)
             );
         } else if eta.as_secs() > 60 {
             println!(
-                "{0}% - ETA: {1} min. {2} sec.",
+                "{0}% - ETA: {1} min. {2} sec. ({3:.2} rays/sec)",
                 progress2,
                 eta.as_secs() / 60,
-                eta.as_secs() % 60
+                eta.as_secs() % 60,
+                SAMPLES_PER_PIXEL as f64 / duration_since.as_secs_f64()
+                    * (IMAGE_WIDTH as f64 * IMAGE_HEIGHT as f64 * 0.01)
             );
         } else {
-            println!("{0}% - ETA: {1} sec.", progress2, eta.as_secs() % 60);
+            println!(
+                "{0}% - ETA: {1} sec. ({2:.2} rays/sec)",
+                progress2,
+                eta.as_secs() % 60,
+                SAMPLES_PER_PIXEL as f64 / duration_since.as_secs_f64()
+                    * (IMAGE_WIDTH as f64 * IMAGE_HEIGHT as f64 * 0.01),
+            );
         }
 
         *progress = progress2;
@@ -149,58 +144,41 @@ fn work(
             let mut rand = rand::thread_rng();
             let mut rng = Random::new(&mut rand, Uniform::new(0.0, 1.0));
             let mut ray = Camera::get_ray(&mut rng, camera, u, v);
-            let mut rec = HitRecord::default();
-            let mut attenuation = Vec3::default();
-            let mut scattered = Ray::default();
             let mut background = Vec3::new(0., 0., 0.);
-            let mut emitted = Vec3::default();
-
-            ray_color_iterative(
-                &mut ray,
-                world,
-                &mut rec,
-                &mut attenuation,
-                &mut scattered,
-                &mut background,
-                &mut emitted,
-                &mut rng,
-                MAX_DEPTH,
-            )
+            ray_color_iterative(&mut ray, world, &mut background, &mut rng, MAX_DEPTH)
         })
         .reduce(Vec3::default, |a, b| a + b)
 }
 
-#[allow(clippy::too_many_arguments)]
 fn ray_color_iterative(
     ray: &mut Ray,
     hittable_list: &HittableList,
-    rec: &mut HitRecord,
-    attenuation: &mut Vec3,
-    scattered: &mut Ray,
     background: &mut Vec3,
-    emitted: &mut Vec3,
     rng: &mut Random<f64>,
     depth: i8,
 ) -> Vec3 {
     let mut acc = Vec3::new(1., 1., 1.);
     let mut depth_count = depth;
+    let mut rec = HitRecord::default();
+    let mut attenuation = Vec3::default();
+    let mut scattered = Ray::default();
+    let mut emitted;
     loop {
-        if hittable_list.hit(ray, f64::MIN_POSITIVE, f64::MAX, rec) {
-            *emitted = rec.material.as_ref().unwrap().emitted(rec.u, rec.v, rec.p);
+        if hittable_list.hit(ray, f64::MIN_POSITIVE, f64::MAX, &mut rec) {
+            emitted = rec.material.as_ref().emitted(rec.u, rec.v, rec.p);
             if rec
                 .material
                 .as_ref()
-                .unwrap()
-                .scatter(rng, ray, rec, attenuation, scattered)
+                .scatter(rng, ray, &rec, &mut attenuation, &mut scattered)
             {
-                acc = acc * *attenuation + *emitted;
-                swap(ray, scattered);
+                acc = acc * attenuation + emitted;
+                swap(ray, &mut scattered);
                 depth_count = depth_count.checked_sub(1).unwrap_or(0);
-                if depth_count <= 0 {
+                if depth_count == 0 {
                     break;
                 }
             } else {
-                acc = acc * *emitted;
+                acc = acc * emitted;
                 break;
             }
         } else {

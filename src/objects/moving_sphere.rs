@@ -1,16 +1,7 @@
-use crate::aabb::Aabb;
+use crate::{aabb::Aabb, hittable::HitRecord, material::Material, ray::Ray, vec3::Vec3};
 
-use crate::hittable::HitRecord;
-
-use crate::ray::Ray;
-
-use super::Hittable;
-
-use crate::material::Material;
-
+use crate::Hittable;
 use std::sync::Arc;
-
-use crate::vec3::Vec3;
 
 pub struct MovingSphere {
     pub center0: Vec3,

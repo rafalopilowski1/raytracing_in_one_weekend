@@ -28,15 +28,20 @@ impl Hittable for Aabb {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, _rec: &mut HitRecord) -> bool {
         let mut t_min = t_min;
         let mut t_max = t_max;
-        for a in 0..3 {
-            let inv_d = 1.0 / ray.direction[a];
-            let mut t0 = (self.min[a] - ray.origin[a]) * inv_d;
-            let mut t1 = (self.max[a] - ray.origin[a]) * inv_d;
-            if inv_d < 0.0 {
-                std::mem::swap(&mut t0, &mut t1);
+
+        let inv_d = Vec3::new(
+            1.0 / ray.direction.x_r,
+            1.0 / ray.direction.y_g,
+            1.0 / ray.direction.z_b,
+        );
+        let mut t0 = (self.min - ray.origin) * inv_d;
+        let mut t1 = (self.max - ray.origin) * inv_d;
+        for a in 0..=2 {
+            if inv_d[a] < 0.0 {
+                std::mem::swap(&mut t0[a], &mut t1[a]);
             }
-            t_min = t0.max(t_min);
-            t_max = t1.min(t_max);
+            t_min = t_min.max(t0[a]);
+            t_max = t_max.min(t1[a]);
             if t_max <= t_min {
                 return false;
             }

@@ -1,6 +1,6 @@
 use crate::{hittable::HitRecord, random::Random, texture::Texture, vec3::Vec3, Ray};
 
-use super::Material;
+use crate::Material;
 
 use std::sync::Arc;
 

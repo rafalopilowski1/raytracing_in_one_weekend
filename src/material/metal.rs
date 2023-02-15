@@ -1,7 +1,7 @@
 use crate::{hittable::HitRecord, random::Random, vec3::Vec3, Ray};
 use std::sync::Arc;
 
-use super::Material;
+use crate::Material;
 
 #[derive(Clone, Copy)]
 pub struct Metal {

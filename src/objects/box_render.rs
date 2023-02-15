@@ -7,7 +7,10 @@ use crate::{
     vec3::Vec3,
 };
 
-use super::{xy_rect::xy_rect, xz_rect::xz_rect, yz_rect::yz_rect, Hittable};
+use crate::{
+    objects::rect::{xy_rect, xz_rect, yz_rect},
+    Hittable,
+};
 
 pub struct BoxRender {
     pmin: Vec3,

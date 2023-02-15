@@ -16,14 +16,14 @@ impl Hittable for BvhNode {
         if !self.bbox.hit(ray, t_min, t_max, rec) {
             return false;
         }
-        let mut hit_left = false;
-        if let Some(left) = &self.left {
-            hit_left = left.hit(ray, t_min, t_max, rec);
-        }
-        let mut hit_right = false;
-        if let Some(right) = &self.right {
-            hit_right = right.hit(ray, t_min, t_max, rec);
-        }
+        let hit_left = self.left.hit(ray, t_min, t_max, rec);
+
+        let hit_right = if hit_left {
+            self.right.hit(ray, t_min, rec.t, rec)
+        } else {
+            self.right.hit(ray, t_min, t_max, rec)
+        };
+
         hit_left || hit_right
     }
 
@@ -85,12 +85,10 @@ impl BvhNode {
         box_left: &mut Aabb,
         box_right: &mut Aabb,
     ) {
-        if let (Some(left), Some(right)) = (&output.left, &output.right) {
-            if !left.bounding_box(time0, time1, box_left)
-                || !right.bounding_box(time0, time1, box_right)
-            {
-                panic!("No bounding box in BvhNode constructor.");
-            }
+        if !output.left.bounding_box(time0, time1, box_left)
+            || !output.right.bounding_box(time0, time1, box_right)
+        {
+            panic!("No bounding box in BvhNode constructor.");
         }
     }
 }

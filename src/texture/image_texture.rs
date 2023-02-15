@@ -1,6 +1,6 @@
 use crate::vec3::Vec3;
 
-use super::Texture;
+use crate::texture::Texture;
 
 use image::{self, GenericImageView};
 

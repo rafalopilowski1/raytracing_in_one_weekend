@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{hittable::HitRecord, material::Material, ray::Ray, vec3::Vec3};
 
-use super::Hittable;
+use crate::Hittable;
 
 pub struct ConstantMedium {
     pub boundary: Arc<dyn Hittable>,
