@@ -4,12 +4,19 @@ Fully-featured ray tracer written in Rust featuring naive multithreading based o
 
 It was made following [Steve Hollasch](https://github.com/hollasch)'s tutorials: *["Ray Tracing in One Weekend"](https://raytracing.github.io/books/RayTracingInOneWeekend.html)* and *["Ray Tracing: The Next Week"](https://raytracing.github.io/books/RayTracingTheNextWeek.html)*.
 
-#### Example render
+#### Example renders
 | resolution  | rays per pixel  |
 |:-----------:|:---------------:|
 | 1280 x 720  |      1000       |
 
-![Example image](render.png)
+![Example image 1](render0.png)
+![Example image 2](render1.png)
+![Example image 3](render2.png)
+![Example image 4](render3.png)
+![Example image 5](render4.png)
+![Example image 6](render5.png)
+![Example image 7](render6.png)
+<!-- ![Example image 8](render7.png) -->
 
 #### Finished functions:
 - [X] The `Vec3` class

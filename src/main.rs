@@ -78,7 +78,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Saving
     println!("Saving...");
-    let file_ppm = File::create("./render.png")?;
+    let file_ppm = File::create(format!("./render{}.png", choice))?;
     let buf_writer = BufWriter::new(file_ppm);
     let enc = PngEncoder::new(buf_writer);
     enc.write_image(&img_buf, IMAGE_WIDTH, IMAGE_HEIGHT, ColorType::Rgb8)?;
