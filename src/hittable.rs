@@ -82,7 +82,7 @@ impl HittableList {
     }
 }
 
-impl Hittable for Option<Arc<dyn Hittable>> {
+impl<T: Hittable + ?Sized> Hittable for Option<Arc<T>> {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
         if let Some(obj) = self {
             obj.hit(ray, t_min, t_max, rec)

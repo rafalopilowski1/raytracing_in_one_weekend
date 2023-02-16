@@ -1,20 +1,21 @@
 use std::sync::Arc;
 
+
 use crate::{aabb::Aabb, hittable::HitRecord, ray::Ray, vec3::Vec3};
 
 use crate::Hittable;
 
-pub struct Translate {
-    pub hittable: Arc<dyn Hittable>,
+pub struct Translate<H: Hittable + ?Sized> {
+    pub hittable: Arc<H>,
     pub offset: Vec3,
 }
-impl Translate {
-    pub fn new(hittable: Arc<dyn Hittable>, offset: Vec3) -> Arc<Self> {
+impl<H: Hittable + ?Sized> Translate<H> {
+    pub fn new(hittable: Arc<H>, offset: Vec3) -> Arc<Self> {
         Arc::from(Self { hittable, offset })
     }
 }
 
-impl Hittable for Translate {
+impl<H: Hittable + ?Sized> Hittable for Translate<H> {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
         let moved = Ray::new(ray.origin - self.offset, ray.direction, ray.time);
         if self.hittable.hit(&moved, t_min, t_max, rec) {

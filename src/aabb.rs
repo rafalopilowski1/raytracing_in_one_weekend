@@ -48,7 +48,6 @@ impl Hittable for Aabb {
         }
         true
     }
-
     fn bounding_box(&self, _time0: f64, _time1: f64, output_box: &mut Aabb) -> bool {
         *output_box = *self;
         true

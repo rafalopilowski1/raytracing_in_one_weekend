@@ -4,18 +4,14 @@ use crate::{hittable::HitRecord, material::Material, ray::Ray, vec3::Vec3};
 
 use crate::Hittable;
 
-pub struct ConstantMedium {
-    pub boundary: Arc<dyn Hittable>,
+pub struct ConstantMedium<H: Hittable + ?Sized> {
+    pub boundary: Arc<H>,
     pub phase_function: Arc<dyn Material>,
     pub neg_inv_density: f64,
 }
 
-impl ConstantMedium {
-    pub fn new(
-        boundary: Arc<dyn Hittable>,
-        density: f64,
-        phase_function: Arc<dyn Material>,
-    ) -> Arc<Self> {
+impl<H: Hittable + ?Sized> ConstantMedium<H> {
+    pub fn new(boundary: Arc<H>, density: f64, phase_function: Arc<dyn Material>) -> Arc<Self> {
         Arc::from(Self {
             boundary,
             phase_function,
@@ -24,7 +20,7 @@ impl ConstantMedium {
     }
 }
 
-impl Hittable for ConstantMedium {
+impl<H: Hittable + ?Sized> Hittable for ConstantMedium<H> {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
         let mut rec1 = HitRecord::default();
         let mut rec2 = HitRecord::default();

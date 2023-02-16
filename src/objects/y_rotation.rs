@@ -1,19 +1,22 @@
 use std::sync::Arc;
 
+use crate::hittable::HitRecord;
+
+
 use crate::{aabb::Aabb, vec3::Vec3};
 
 use crate::Hittable;
 
-pub struct YRotation {
-    pub hittable: Arc<dyn Hittable>,
+pub struct YRotation<H: Hittable + ?Sized> {
+    pub hittable: Arc<H>,
     pub sin_theta: f64,
     pub cos_theta: f64,
     pub has_box: bool,
     pub bbox: Aabb,
 }
 
-impl YRotation {
-    pub fn new(hittable: Arc<dyn Hittable>, angle: f64) -> Arc<Self> {
+impl<H: Hittable + ?Sized> YRotation<H> {
+    pub fn new(hittable: Arc<H>, angle: f64) -> Arc<Self> {
         let radians = angle.to_radians();
         let sin_theta = radians.sin();
         let cos_theta = radians.cos();
@@ -48,14 +51,8 @@ impl YRotation {
     }
 }
 
-impl Hittable for YRotation {
-    fn hit(
-        &self,
-        ray: &crate::ray::Ray,
-        t_min: f64,
-        t_max: f64,
-        rec: &mut crate::hittable::HitRecord,
-    ) -> bool {
+impl<H: Hittable + ?Sized> Hittable for YRotation<H> {
+    fn hit(&self, ray: &crate::ray::Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
         let mut origin = ray.origin;
         let mut direction = ray.direction;
         origin.x_r = self.cos_theta * ray.origin.x_r - self.sin_theta * ray.origin.z_b;

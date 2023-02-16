@@ -4,18 +4,18 @@ use crate::texture::Texture;
 
 use std::sync::Arc;
 
-pub struct CheckerTexture {
-    pub(crate) odd: Arc<dyn Texture>,
-    pub(crate) even: Arc<dyn Texture>,
+pub struct CheckerTexture<T1: Texture + ?Sized, T2: Texture + ?Sized> {
+    pub(crate) odd: Arc<T1>,
+    pub(crate) even: Arc<T2>,
 }
 
-impl CheckerTexture {
-    pub fn new(odd: Arc<dyn Texture>, even: Arc<dyn Texture>) -> Arc<Self> {
+impl<T1: Texture + ?Sized, T2: Texture + ?Sized> CheckerTexture<T1, T2> {
+    pub fn new(odd: Arc<T1>, even: Arc<T2>) -> Arc<Self> {
         Arc::from(Self { odd, even })
     }
 }
 
-impl Texture for CheckerTexture {
+impl<T1: Texture + ?Sized, T2: Texture + ?Sized> Texture for CheckerTexture<T1, T2> {
     fn color(&self, u: f64, v: f64, p: Vec3) -> Vec3 {
         let sines = (10. * p.x_r).sin() * (10. * p.y_g).sin() * (10. * p.z_b).sin();
         if sines < 0. {

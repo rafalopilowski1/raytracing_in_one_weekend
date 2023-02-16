@@ -21,7 +21,7 @@ pub mod isotropic;
 pub mod lamberian;
 pub mod metal;
 
-impl Material for Option<&Arc<dyn Material>> {
+impl<T: Material + ?Sized> Material for Option<&Arc<T>> {
     fn scatter(
         &self,
         rng: &mut Random<f64>,
