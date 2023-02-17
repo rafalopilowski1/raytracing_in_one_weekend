@@ -2,9 +2,9 @@ use crate::vec3::Vec3;
 
 use crate::texture::Texture;
 
-use image::{self, GenericImageView};
+use image::{self, io::Reader, GenericImageView};
 
-use std::path::Path;
+use std::{error::Error, fs::File, io::BufReader, path::Path, sync::Arc};
 
 use image::Rgb32FImage;
 
@@ -15,23 +15,18 @@ pub struct ImageTexture {
 }
 
 impl ImageTexture {
-    pub fn new(path: &Path) -> Self {
-        let img = image::open(path).ok();
-        if let Some(img) = img {
-            let (width, height) = img.dimensions();
-            let data = img.into_rgb32f();
-            Self {
-                data: Some(data),
-                width: width as usize,
-                height: height as usize,
-            }
-        } else {
-            Self {
-                data: None,
-                width: 0,
-                height: 0,
-            }
-        }
+    pub fn new(path: &Path) -> Result<Arc<Self>, Box<dyn Error>> {
+        let r = File::open(path)?;
+        let buf_read = BufReader::new(r);
+        let img_reader = Reader::new(buf_read);
+        let img = img_reader.with_guessed_format()?.decode()?;
+        let (width, height) = img.dimensions();
+        let data = img.into_rgb32f();
+        Ok(Arc::from(Self {
+            data: Some(data),
+            width: width as usize,
+            height: height as usize,
+        }))
     }
 }
 

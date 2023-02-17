@@ -63,11 +63,11 @@ impl ImageEnvBuilder {
                 );
 
                 if Vec3::length(center - Vec3::new(4., 0.2, 0.)) > 0.9 {
-                    let sphere_material: Option<Arc<dyn Material>>;
+                    let sphere_material: Arc<dyn Material>;
                     if choose_mat < 0.8 {
                         // diffuse
                         let albedo = Vec3::random(rng, None, None) * Vec3::random(rng, None, None);
-                        sphere_material = Some(Lamberian::new(SolidColor::new(albedo)));
+                        sphere_material = Lamberian::new(SolidColor::new(albedo));
                         let center2 = center + Vec3::new(0., rng.random(Some(0.), Some(0.5)), 0.);
                         world.objects.push(Arc::new(MovingSphere::new(
                             center,
@@ -75,21 +75,21 @@ impl ImageEnvBuilder {
                             0.0,
                             1.0,
                             0.2,
-                            sphere_material.unwrap(),
+                            sphere_material,
                         )));
                         continue;
                     } else if choose_mat < 0.95 {
                         // metal
                         let albedo = Vec3::random(rng, Some(0.5), Some(1.));
                         let fuzz = rng.random(Some(0.), Some(0.5));
-                        sphere_material = Some(Metal::new(albedo, fuzz));
+                        sphere_material = Metal::new(albedo, fuzz);
                     } else {
                         // glass
-                        sphere_material = Some(Dielectric::new(1.5));
+                        sphere_material = Dielectric::new(1.5);
                     }
                     world
                         .objects
-                        .push(Sphere::new(center, 0.2, sphere_material.unwrap()));
+                        .push(Sphere::new(center, 0.2, sphere_material));
                 }
             }
         }
@@ -189,10 +189,11 @@ impl ImageEnvBuilder {
 
     pub fn earth() -> (Camera, Arc<HittableList>) {
         let mut world = HittableList::new(vec![]);
-        let earth_texture = Arc::new(ImageTexture::new(Path::new("earthmap.jpg")));
-        let earth_surface = DiffuseLight::new(earth_texture);
-        let globe = Sphere::new(Vec3::new(0., 0., 0.), 2., earth_surface);
-        world.objects.push(globe);
+        if let Ok(earth_texture) = ImageTexture::new(Path::new("earthmap.jpg")) {
+            let earth_surface = DiffuseLight::new(earth_texture);
+            let globe = Sphere::new(Vec3::new(0., 0., 0.), 2., earth_surface);
+            world.objects.push(globe);
+        }
         let mut return_world = HittableList::new(vec![]);
         return_world
             .objects
@@ -452,11 +453,13 @@ impl ImageEnvBuilder {
             0.0001,
             Isotropic::new(SolidColor::new(Vec3::new(1., 1., 1.))),
         ));
+        if let Ok(earth_texture) = ImageTexture::new(Path::new("earthmap.jpg")) {
+            let emat = Lamberian::new(earth_texture);
+            world
+                .objects
+                .push(Sphere::new(Vec3::new(400., 200., 400.), 100., emat));
+        }
 
-        let emat = Lamberian::new(Arc::new(ImageTexture::new(Path::new("earthmap.jpg"))));
-        world
-            .objects
-            .push(Sphere::new(Vec3::new(400., 200., 400.), 100., emat));
         let pertext = Arc::new(NoiseTexture::new(random, 0.1));
         world.objects.push(Sphere::new(
             Vec3::new(220., 280., 300.),
