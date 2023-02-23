@@ -13,7 +13,7 @@ mod vec3;
 
 use camera::Camera;
 
-use hittable::{HitRecord, HittableList};
+use hittable::HittableList;
 use image::{codecs::png::PngEncoder, ColorType, ImageEncoder};
 use material::Material;
 use objects::Hittable;
@@ -39,7 +39,7 @@ const IMAGE_HEIGHT: u32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as u32;
 
 fn main() -> Result<(), Box<dyn Error>> {
     // World
-    let choice = 7;
+    let choice = 1;
     let mut rng = rand::thread_rng();
     let mut random = Random::new(&mut rng, Uniform::new(0.0, 1.0));
     // Camera
@@ -53,8 +53,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut progress: u32 = 0;
     let mut time1 = Instant::now();
+    let mut random = Random::new(&mut rng, Uniform::new(0.0, 1.0));
     (0..IMAGE_WIDTH * IMAGE_HEIGHT).for_each(|i| {
-        let mut random = Random::new(&mut rng, Uniform::new(0.0, 1.0));
         let w = i % IMAGE_WIDTH;
         let h = i / IMAGE_WIDTH;
         // TODO: workaround to invert image; investigate why is it needed?
@@ -159,12 +159,11 @@ fn ray_color_iterative(
 ) -> Vec3 {
     let mut acc = Vec3::new(1., 1., 1.);
     let mut depth_count = depth;
-    let mut rec = HitRecord::default();
     let mut attenuation = Vec3::default();
     let mut scattered = Ray::default();
     let mut emitted;
     loop {
-        if hittable_list.hit(ray, f64::MIN_POSITIVE, f64::MAX, &mut rec) {
+        if let Some(rec) = hittable_list.hit(ray, f64::MIN_POSITIVE, f64::MAX) {
             emitted = rec.material.as_ref().emitted(rec.u, rec.v, rec.p);
             if rec
                 .material

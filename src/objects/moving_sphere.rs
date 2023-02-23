@@ -16,7 +16,7 @@ pub struct MovingSphere {
 }
 
 impl Hittable for MovingSphere {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let oc = ray.origin - self.center(ray.time);
         let a: f64 = Vec3::length_squared(ray.direction);
         let half_b: f64 = Vec3::dot(oc, ray.direction);
@@ -24,7 +24,7 @@ impl Hittable for MovingSphere {
         let discriminant = half_b.powi(2) - a * c;
 
         if discriminant < 0. {
-            return false;
+            return None;
         }
         let sqrtd = discriminant.sqrt();
 
@@ -34,15 +34,24 @@ impl Hittable for MovingSphere {
         if root < t_min || t_max < root {
             root = (-half_b + sqrtd) / a;
             if root < t_min || t_max < root {
-                return false;
+                return None;
             }
         }
-        rec.t = root;
-        rec.p = ray.at(rec.t);
+        let mut rec = HitRecord {
+            t: root,
+            p: ray.at(root),
+            material: Some(self.material.clone()),
+            ..Default::default()
+        };
         let outward_normal = (rec.p - self.center(ray.time)) / self.radius;
-        rec.set_face_normal(ray, outward_normal);
+        rec.front_face = Vec3::dot(ray.direction, outward_normal) < 0.;
+        rec.normal = if rec.front_face {
+            outward_normal
+        } else {
+            -outward_normal
+        };
         rec.material = Some(self.material.clone());
-        true
+        Some(rec)
     }
 
     fn bounding_box(&self, time0: f64, time1: f64, output_box: &mut Aabb) -> bool {

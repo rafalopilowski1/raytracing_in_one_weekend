@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-
 use crate::{aabb::Aabb, hittable::HitRecord, ray::Ray, vec3::Vec3};
 
 use crate::Hittable;
@@ -16,13 +15,13 @@ impl<H: Hittable + ?Sized> Translate<H> {
 }
 
 impl<H: Hittable + ?Sized> Hittable for Translate<H> {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let moved = Ray::new(ray.origin - self.offset, ray.direction, ray.time);
-        if self.hittable.hit(&moved, t_min, t_max, rec) {
+        if let Some(mut rec) = self.hittable.hit(&moved, t_min, t_max) {
             rec.p += self.offset;
-            true
+            Some(rec)
         } else {
-            false
+            None
         }
     }
     fn bounding_box(&self, time0: f64, time1: f64, output_box: &mut Aabb) -> bool {

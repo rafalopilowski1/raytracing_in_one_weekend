@@ -25,7 +25,7 @@ impl Aabb {
     }
 }
 impl Hittable for Aabb {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, _rec: &mut HitRecord) -> bool {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let mut t_min = t_min;
         let mut t_max = t_max;
 
@@ -43,10 +43,10 @@ impl Hittable for Aabb {
             t_min = t_min.max(t0[a]);
             t_max = t_max.min(t1[a]);
             if t_max <= t_min {
-                return false;
+                return None;
             }
         }
-        true
+        Some(HitRecord::default())
     }
     fn bounding_box(&self, _time0: f64, _time1: f64, output_box: &mut Aabb) -> bool {
         *output_box = *self;

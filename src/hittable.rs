@@ -14,16 +14,7 @@ pub struct HitRecord {
     pub front_face: bool,
 }
 
-impl HitRecord {
-    pub fn set_face_normal(&mut self, ray: &Ray, outward_normal: Vec3) {
-        self.front_face = Vec3::dot(ray.direction, outward_normal) < 0.;
-        self.normal = if self.front_face {
-            outward_normal
-        } else {
-            -outward_normal
-        };
-    }
-}
+impl HitRecord {}
 impl Default for HitRecord {
     fn default() -> Self {
         Self {
@@ -42,18 +33,18 @@ pub struct HittableList {
     pub objects: Vec<Arc<dyn Hittable>>,
 }
 impl Hittable for HittableList {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
-        let mut hit_anything = false;
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        let mut hit_record = None;
         let mut closest_so_far = t_max;
 
-        self.objects.iter().for_each(|object| {
-            if object.hit(ray, t_min, closest_so_far, rec) {
+        for object in self.objects.iter() {
+            if let Some(rec) = object.hit(ray, t_min, closest_so_far) {
                 closest_so_far = rec.t;
-                hit_anything = true;
+                hit_record = Some(rec);
             }
-        });
+        }
 
-        hit_anything
+        hit_record
     }
 
     fn bounding_box(&self, time0: f64, time1: f64, output_box: &mut Aabb) -> bool {
@@ -83,19 +74,19 @@ impl HittableList {
 }
 
 impl<T: Hittable + ?Sized> Hittable for Option<Arc<T>> {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
-        if let Some(obj) = self {
-            obj.hit(ray, t_min, t_max, rec)
-        } else {
-            false
-        }
-    }
-
     fn bounding_box(&self, time0: f64, time1: f64, output_box: &mut Aabb) -> bool {
         if let Some(obj) = self {
             obj.bounding_box(time0, time1, output_box)
         } else {
             false
+        }
+    }
+
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        if let Some(obj) = self {
+            obj.hit(ray, t_min, t_max)
+        } else {
+            None
         }
     }
 }

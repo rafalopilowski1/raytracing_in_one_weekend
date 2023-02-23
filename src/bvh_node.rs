@@ -12,19 +12,28 @@ pub struct BvhNode {
 }
 
 impl Hittable for BvhNode {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
-        if !self.bbox.hit(ray, t_min, t_max, rec) {
-            return false;
-        }
-        let hit_left = self.left.hit(ray, t_min, t_max, rec);
-
-        let hit_right = if hit_left {
-            self.right.hit(ray, t_min, rec.t, rec)
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        self.bbox.hit(ray, t_min, t_max)?;
+        let hit_left = self.left.hit(ray, t_min, t_max);
+        let hit_right = if let Some(rec) = hit_left.as_ref() {
+            self.right.hit(ray, t_min, rec.t)
         } else {
-            self.right.hit(ray, t_min, t_max, rec)
+            self.right.hit(ray, t_min, t_max)
         };
 
-        hit_left || hit_right
+        if let Some(rec) = hit_left {
+            if let Some(rec_right) = hit_right {
+                if rec.t < rec_right.t {
+                    Some(rec)
+                } else {
+                    Some(rec_right)
+                }
+            } else {
+                Some(rec)
+            }
+        } else {
+            hit_right
+        }
     }
 
     fn bounding_box(&self, _time0: f64, _time1: f64, output_box: &mut Aabb) -> bool {
@@ -51,16 +60,12 @@ impl BvhNode {
         } else {
             src_objects.par_sort_unstable_by(Self::box_compare);
             let mid = length / 2;
-            output.left = Some(Arc::new(BvhNode::new(
-                &mut src_objects[0..mid],
-                time0,
-                time1,
-            )));
-            output.right = Some(Arc::new(BvhNode::new(
-                &mut src_objects[mid..length],
-                time0,
-                time1,
-            )));
+            let (new_left, new_right) = rayon::join(
+                || BvhNode::new(&mut src_objects[0..mid].to_vec(), time0, time1),
+                || BvhNode::new(&mut src_objects[mid..length].to_vec(), time0, time1),
+            );
+            output.left = Some(Arc::new(new_left));
+            output.right = Some(Arc::new(new_right));
         }
         let mut box_left = Aabb::default();
         let mut box_right = Aabb::default();
@@ -72,7 +77,11 @@ impl BvhNode {
     fn box_compare(a: &Arc<dyn Hittable>, b: &Arc<dyn Hittable>) -> Ordering {
         let mut box_a = Aabb::default();
         let mut box_b = Aabb::default();
-        if !a.bounding_box(0.0, 0.0, &mut box_a) || !b.bounding_box(0.0, 0.0, &mut box_b) {
+        let (a_result, b_result) = rayon::join(
+            || a.bounding_box(0.0, 0.0, &mut box_a),
+            || b.bounding_box(0.0, 0.0, &mut box_b),
+        );
+        if !a_result || !b_result {
             panic!("No bounding box in BvhNode constructor.");
         }
 
@@ -85,9 +94,11 @@ impl BvhNode {
         box_left: &mut Aabb,
         box_right: &mut Aabb,
     ) {
-        if !output.left.bounding_box(time0, time1, box_left)
-            || !output.right.bounding_box(time0, time1, box_right)
-        {
+        let (a_result, b_result) = rayon::join(
+            || output.left.bounding_box(time0, time1, box_left),
+            || output.right.bounding_box(time0, time1, box_right),
+        );
+        if !a_result || !b_result {
             panic!("No bounding box in BvhNode constructor.");
         }
     }

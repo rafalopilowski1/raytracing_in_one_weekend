@@ -21,39 +21,42 @@ impl<H: Hittable + ?Sized> ConstantMedium<H> {
 }
 
 impl<H: Hittable + ?Sized> Hittable for ConstantMedium<H> {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
-        let mut rec1 = HitRecord::default();
-        let mut rec2 = HitRecord::default();
-        if !self.boundary.hit(ray, f64::MIN, f64::MAX, &mut rec1) {
-            return false;
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        if let Some(mut rec1) = self.boundary.hit(ray, f64::MIN, f64::MAX) {
+            if let Some(mut rec2) = self.boundary.hit(ray, rec1.t + 0.0001, f64::MAX) {
+                if rec1.t < t_min {
+                    rec1.t = t_min;
+                }
+                if rec2.t > t_max {
+                    rec2.t = t_max;
+                }
+                if rec1.t >= rec2.t {
+                    return None;
+                }
+                if rec1.t < 0.0 {
+                    rec1.t = 0.0;
+                }
+                let ray_length = Vec3::length(ray.direction);
+                let distance_inside_boundary = (rec2.t - rec1.t) * ray_length;
+                let hit_distance = self.neg_inv_density * rand::random::<f64>().ln();
+                if hit_distance > distance_inside_boundary {
+                    return None;
+                }
+                let root = rec1.t + hit_distance / ray_length;
+                Some(HitRecord {
+                    p: ray.at(root),
+                    t: root,
+                    normal: Vec3::new(1.0, 0.0, 0.0),
+                    front_face: true,
+                    material: Some(self.phase_function.clone()),
+                    ..Default::default()
+                })
+            } else {
+                None
+            }
+        } else {
+            None
         }
-        if !self.boundary.hit(ray, rec1.t + 0.0001, f64::MAX, &mut rec2) {
-            return false;
-        }
-        if rec1.t < t_min {
-            rec1.t = t_min;
-        }
-        if rec2.t > t_max {
-            rec2.t = t_max;
-        }
-        if rec1.t >= rec2.t {
-            return false;
-        }
-        if rec1.t < 0.0 {
-            rec1.t = 0.0;
-        }
-        let ray_length = Vec3::length(ray.direction);
-        let distance_inside_boundary = (rec2.t - rec1.t) * ray_length;
-        let hit_distance = self.neg_inv_density * rand::random::<f64>().ln();
-        if hit_distance > distance_inside_boundary {
-            return false;
-        }
-        rec.t = rec1.t + hit_distance / ray_length;
-        rec.p = ray.at(rec.t);
-        rec.normal = Vec3::new(1.0, 0.0, 0.0);
-        rec.front_face = true;
-        rec.material = Some(self.phase_function.clone());
-        true
     }
     fn bounding_box(&self, time0: f64, time1: f64, output_box: &mut crate::aabb::Aabb) -> bool {
         self.boundary.bounding_box(time0, time1, output_box)

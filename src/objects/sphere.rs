@@ -13,7 +13,7 @@ pub struct Sphere {
     pub material: Arc<dyn Material>,
 }
 impl Hittable for Sphere {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let a: f64 = Vec3::length_squared(ray.direction);
         let oc = ray.origin - self.center;
         let half_b: f64 = Vec3::dot(oc, ray.direction);
@@ -21,7 +21,7 @@ impl Hittable for Sphere {
         let discriminant = half_b.powi(2) - a * c;
 
         if discriminant < 0. {
-            return false;
+            return None;
         }
         let sqrtd = discriminant.sqrt();
 
@@ -31,16 +31,24 @@ impl Hittable for Sphere {
         if root < t_min || root > t_max {
             root = (-half_b + sqrtd) / a;
             if root < t_min || root > t_max {
-                return false;
+                return None;
             }
         }
-        rec.t = root;
-        rec.p = ray.at(rec.t);
+        let mut rec = HitRecord {
+            t: root,
+            p: ray.at(root),
+            material: Some(self.material.clone()),
+            ..Default::default()
+        };
         let outward_normal = (rec.p - self.center) / self.radius;
-        rec.set_face_normal(ray, outward_normal);
+        rec.front_face = Vec3::dot(ray.direction, outward_normal) < 0.;
+        rec.normal = if rec.front_face {
+            outward_normal
+        } else {
+            -outward_normal
+        };
         Sphere::get_sphere_uv(outward_normal, &mut rec.u, &mut rec.v);
-        rec.material = Some(self.material.clone());
-        true
+        Some(rec)
     }
 
     fn bounding_box(&self, _time0: f64, _time1: f64, output_box: &mut Aabb) -> bool {

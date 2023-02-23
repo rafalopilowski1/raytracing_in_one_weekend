@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::hittable::HitRecord;
 
-
+use crate::ray::Ray;
 use crate::{aabb::Aabb, vec3::Vec3};
 
 use crate::Hittable;
@@ -52,15 +52,15 @@ impl<H: Hittable + ?Sized> YRotation<H> {
 }
 
 impl<H: Hittable + ?Sized> Hittable for YRotation<H> {
-    fn hit(&self, ray: &crate::ray::Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let mut origin = ray.origin;
         let mut direction = ray.direction;
         origin.x_r = self.cos_theta * ray.origin.x_r - self.sin_theta * ray.origin.z_b;
         origin.z_b = self.sin_theta * ray.origin.x_r + self.cos_theta * ray.origin.z_b;
         direction.x_r = self.cos_theta * ray.direction.x_r - self.sin_theta * ray.direction.z_b;
         direction.z_b = self.sin_theta * ray.direction.x_r + self.cos_theta * ray.direction.z_b;
-        let rotated_ray = crate::ray::Ray::new(origin, direction, ray.time);
-        if self.hittable.hit(&rotated_ray, t_min, t_max, rec) {
+        let rotated_ray = Ray::new(origin, direction, ray.time);
+        if let Some(mut rec) = self.hittable.hit(&rotated_ray, t_min, t_max) {
             let mut p = rec.p;
             let mut normal = rec.normal;
             p.x_r = self.cos_theta * rec.p.x_r + self.sin_theta * rec.p.z_b;
@@ -68,10 +68,12 @@ impl<H: Hittable + ?Sized> Hittable for YRotation<H> {
             normal.x_r = self.cos_theta * rec.normal.x_r + self.sin_theta * rec.normal.z_b;
             normal.z_b = -self.sin_theta * rec.normal.x_r + self.cos_theta * rec.normal.z_b;
             rec.p = p;
-            rec.set_face_normal(&rotated_ray, normal);
-            true
+            let ray = &rotated_ray;
+            rec.front_face = Vec3::dot(ray.direction, normal) < 0.;
+            rec.normal = if rec.front_face { normal } else { -normal };
+            Some(rec)
         } else {
-            false
+            None
         }
     }
     fn bounding_box(&self, _time0: f64, _time1: f64, output_box: &mut Aabb) -> bool {
