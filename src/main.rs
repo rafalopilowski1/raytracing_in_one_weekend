@@ -32,14 +32,14 @@ use crate::image_env_builder::ImageEnvBuilder;
 static GLOBAL: MiMalloc = MiMalloc;
 
 const SAMPLES_PER_PIXEL: u32 = 1000;
-const MAX_DEPTH: i8 = 50;
+const MAX_DEPTH: u8 = 50;
 const IMAGE_WIDTH: u32 = 1280;
 const ASPECT_RATIO: f64 = 16. / 9.;
 const IMAGE_HEIGHT: u32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as u32;
 
 fn main() -> Result<(), Box<dyn Error>> {
     // World
-    let choice = 1;
+    let choice = 7;
     let mut rng = rand::thread_rng();
     let mut random = Random::new(&mut rng, Uniform::new(0.0, 1.0));
     // Camera
@@ -155,7 +155,7 @@ fn ray_color_iterative(
     hittable_list: &HittableList,
     background: &mut Vec3,
     rng: &mut Random<f64>,
-    depth: i8,
+    depth: u8,
 ) -> Vec3 {
     let mut acc = Vec3::new(1., 1., 1.);
     let mut depth_count = depth;
@@ -172,7 +172,7 @@ fn ray_color_iterative(
             {
                 acc = acc * attenuation + emitted;
                 swap(ray, &mut scattered);
-                depth_count = depth_count.checked_sub(1).unwrap_or(0);
+                depth_count = depth_count.saturating_sub(1);
                 if depth_count == 0 {
                     break;
                 }

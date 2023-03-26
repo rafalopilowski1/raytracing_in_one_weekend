@@ -42,7 +42,7 @@ impl Perlin {
         let j = p.y_g.floor() as i64;
         let k = p.z_b.floor() as i64;
 
-        let mut c = [[[Vec3::new(0.0, 0.0, 0.0); 2]; 2]; 2];
+        let mut c = [[[Vec3::default(); 2]; 2]; 2];
 
         for (di, elem) in c.iter_mut().enumerate() {
             for (dj, elem2) in elem.iter_mut().enumerate() {
