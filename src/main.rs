@@ -39,7 +39,7 @@ const IMAGE_HEIGHT: u32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as u32;
 
 fn main() -> Result<(), Box<dyn Error>> {
     // World
-    let choice = 7;
+    let choice = 0;
     let mut rng = rand::thread_rng();
     let mut random = Random::new(&mut rng, Uniform::new(0.0, 1.0));
     // Camera
@@ -78,7 +78,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Saving
     println!("Saving...");
-    let file_ppm = File::create(format!("./render{}.png", choice))?;
+    let file_ppm = File::create(format!("./render/render{}.png", choice))?;
     let buf_writer = BufWriter::new(file_ppm);
     let enc = PngEncoder::new(buf_writer);
     enc.write_image(&img_buf, IMAGE_WIDTH, IMAGE_HEIGHT, ColorType::Rgb8)?;

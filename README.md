@@ -10,14 +10,14 @@ It was made following [Steve Hollasch](https://github.com/hollasch)'s tutorials:
 |:-----------:|:---------------:|
 | 1280 x 720  |      1000       |
 
-![Example image 1](render0.png)
-![Example image 2](render1.png)
-![Example image 3](render2.png)
-![Example image 4](render3.png)
-![Example image 5](render4.png)
-![Example image 6](render5.png)
-![Example image 7](render6.png)
-![Example image 8](render7.png)
+![Example image 1](render/render0.png)
+![Example image 2](render/render1.png)
+![Example image 3](render/render2.png)
+![Example image 4](render/render3.png)
+![Example image 5](render/render4.png)
+![Example image 6](render/render5.png)
+![Example image 7](render/render6.png)
+![Example image 8](render/render7.png)
 
 #### Finished functions
 
