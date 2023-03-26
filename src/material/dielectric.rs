@@ -30,11 +30,11 @@ impl Material for Dielectric {
 
         let cannot_refract = refraction_ratio * sin_theta > 1.0;
         let direction: Vec3 = if cannot_refract
-            || Dielectric::reflactance(cos_theta, refraction_ratio) > rng.random(None, None)
+            || Dielectric::reflectance(cos_theta, refraction_ratio) > rng.random(None, None)
         {
             Vec3::reflect(unit_direction, rec.normal)
         } else {
-            Vec3::reflact(unit_direction, rec.normal, refraction_ratio)
+            Vec3::refract(unit_direction, rec.normal, refraction_ratio)
         };
 
         *scattered = Ray::new(rec.p, direction, ray_in.time);
@@ -47,9 +47,9 @@ impl Dielectric {
         Arc::from(Self { ir })
     }
 
-    pub fn reflactance(cosine: f64, ref_idx: f64) -> f64 {
+    pub fn reflectance(cosine: f64, ref_idx: f64) -> f64 {
         let mut r0 = (1. - ref_idx) / (1. + ref_idx);
         r0 = r0.powi(2);
-        r0 * (1. - r0) * (1. - cosine).powi(5)
+        r0 + (1. - r0) * (1. - cosine).powi(5)
     }
 }

@@ -1,6 +1,7 @@
 use crate::{aabb::Aabb, hittable::HitRecord, material::Material, ray::Ray, vec3::Vec3};
 
 use crate::Hittable;
+use std::f64::consts;
 use std::sync::Arc;
 
 pub struct MovingSphere {
@@ -44,12 +45,8 @@ impl Hittable for MovingSphere {
             ..Default::default()
         };
         let outward_normal = (rec.p - self.center(ray.time)) / self.radius;
-        rec.front_face = Vec3::dot(ray.direction, outward_normal) < 0.;
-        rec.normal = if rec.front_face {
-            outward_normal
-        } else {
-            -outward_normal
-        };
+        rec.set_face_normal(ray, outward_normal);
+        MovingSphere::get_sphere_uv(outward_normal, &mut rec.u, &mut rec.v);
         rec.material = Some(self.material.clone());
         Some(rec)
     }
@@ -89,5 +86,10 @@ impl MovingSphere {
     pub fn center(&self, time: f64) -> Vec3 {
         self.center0
             + (self.center1 - self.center0) * ((time - self.time0) / (self.time1 - self.time0))
+    }
+
+    pub fn get_sphere_uv(p: Vec3, u: &mut f64, v: &mut f64) {
+        *u = 0.5 + f64::atan2(-p.z_b, p.x_r) * 0.5 * consts::FRAC_1_PI;
+        *v = 0.5 + f64::asin(p.y_g) * consts::FRAC_1_PI;
     }
 }

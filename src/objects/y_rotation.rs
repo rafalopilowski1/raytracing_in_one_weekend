@@ -69,8 +69,7 @@ impl<H: Hittable + ?Sized> Hittable for YRotation<H> {
             normal.z_b = -self.sin_theta * rec.normal.x_r + self.cos_theta * rec.normal.z_b;
             rec.p = p;
             let ray = &rotated_ray;
-            rec.front_face = Vec3::dot(ray.direction, normal) < 0.;
-            rec.normal = if rec.front_face { normal } else { -normal };
+            rec.set_face_normal(ray, normal);
             Some(rec)
         } else {
             None

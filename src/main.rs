@@ -38,8 +38,13 @@ const ASPECT_RATIO: f64 = 16. / 9.;
 const IMAGE_HEIGHT: u32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as u32;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let args = std::env::args().collect::<Vec<String>>();
+    if args.len() != 2 {
+        println!("Usage: ./raytracer [choice]");
+        return Ok(());
+    }
     // World
-    let choice = 0;
+    let choice: u32 = args[1].parse()?;
     let mut rng = rand::thread_rng();
     let mut random = Random::new(&mut rng, Uniform::new(0.0, 1.0));
     // Camera

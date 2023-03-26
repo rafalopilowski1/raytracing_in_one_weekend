@@ -41,12 +41,7 @@ impl Hittable for Sphere {
             ..Default::default()
         };
         let outward_normal = (rec.p - self.center) / self.radius;
-        rec.front_face = Vec3::dot(ray.direction, outward_normal) < 0.;
-        rec.normal = if rec.front_face {
-            outward_normal
-        } else {
-            -outward_normal
-        };
+        rec.set_face_normal(ray, outward_normal);
         Sphere::get_sphere_uv(outward_normal, &mut rec.u, &mut rec.v);
         Some(rec)
     }
@@ -68,9 +63,7 @@ impl Sphere {
         })
     }
     pub fn get_sphere_uv(p: Vec3, u: &mut f64, v: &mut f64) {
-        let phi = p.z_b.atan2(p.x_r);
-        let theta = p.y_g.asin();
-        *u = 1. - (phi + consts::PI) / (2. * consts::PI);
-        *v = (theta + consts::FRAC_PI_2) / consts::PI;
+        *u = 0.5 + f64::atan2(-p.z_b, p.x_r) * 0.5 * consts::FRAC_1_PI;
+        *v = 0.5 + f64::asin(p.y_g) * consts::FRAC_1_PI;
     }
 }

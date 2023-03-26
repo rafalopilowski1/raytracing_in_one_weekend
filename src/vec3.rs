@@ -105,7 +105,7 @@ impl Vec3 {
         v - n * Vec3::dot(v, n) * 2.
     }
 
-    pub fn reflact(uv: Self, n: Self, etai_over_etat: f64) -> Self {
+    pub fn refract(uv: Self, n: Self, etai_over_etat: f64) -> Self {
         let cos_theta = Vec3::dot(-uv, n).min(1.0);
         let r_out_perp = (uv + n * cos_theta) * etai_over_etat;
         let r_out_parallel = n * -(1.0 - Vec3::length_squared(r_out_perp)).abs().sqrt();

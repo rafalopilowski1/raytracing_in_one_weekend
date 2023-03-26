@@ -52,12 +52,7 @@ impl Hittable for xy_rect {
         };
 
         let outward_normal = Vec3::new(0.0, 0.0, 1.0);
-        rec.front_face = Vec3::dot(ray.direction, outward_normal) < 0.;
-        rec.normal = if rec.front_face {
-            outward_normal
-        } else {
-            -outward_normal
-        };
+        rec.set_face_normal(ray, outward_normal);
 
         Some(rec)
     }
@@ -104,12 +99,7 @@ impl Hittable for xz_rect {
             ..Default::default()
         };
         let outward_normal = Vec3::new(0.0, 1.0, 0.0);
-        rec.front_face = Vec3::dot(ray.direction, outward_normal) < 0.;
-        rec.normal = if rec.front_face {
-            outward_normal
-        } else {
-            -outward_normal
-        };
+        rec.set_face_normal(ray, outward_normal);
         Some(rec)
     }
     fn bounding_box(&self, _time0: f64, _time1: f64, output_box: &mut Aabb) -> bool {
@@ -162,13 +152,7 @@ impl Hittable for yz_rect {
         };
 
         let outward_normal = Vec3::new(1.0, 0.0, 0.0);
-        rec.front_face = Vec3::dot(ray.direction, outward_normal) < 0.;
-        rec.normal = if rec.front_face {
-            outward_normal
-        } else {
-            -outward_normal
-        };
-
+        rec.set_face_normal(ray, outward_normal);
         Some(rec)
     }
     fn bounding_box(&self, _time0: f64, _time1: f64, output_box: &mut Aabb) -> bool {
